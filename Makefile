@@ -38,5 +38,5 @@ commit:
 pull: add commit
 	git pull
 
-push: pull
+push: clean pull
 	git push
