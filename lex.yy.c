@@ -53,7 +53,6 @@ typedef int flex_int32_t;
 typedef unsigned char flex_uint8_t; 
 typedef unsigned short int flex_uint16_t;
 typedef unsigned int flex_uint32_t;
-#endif /* ! C99 */
 
 /* Limits of integral types. */
 #ifndef INT8_MIN
@@ -83,6 +82,8 @@ typedef unsigned int flex_uint32_t;
 #ifndef UINT32_MAX
 #define UINT32_MAX             (4294967295U)
 #endif
+
+#endif /* ! C99 */
 
 #endif /* ! FLEXINT_H */
 
@@ -140,7 +141,15 @@ typedef unsigned int flex_uint32_t;
 
 /* Size of default input buffer. */
 #ifndef YY_BUF_SIZE
+#ifdef __ia64__
+/* On IA-64, the buffer size is 16k, not 8k.
+ * Moreover, YY_BUF_SIZE is 2*YY_READ_BUF_SIZE in the general case.
+ * Ditto for the __ia64__ case accordingly.
+ */
+#define YY_BUF_SIZE 32768
+#else
 #define YY_BUF_SIZE 16384
+#endif /* __ia64__ */
 #endif
 
 /* The state buf must be large enough to hold one state per character in the main buffer.
@@ -477,64 +486,19 @@ char *yytext;
 /* includes necessarios */
 #include "sintatico.tab.h"
 #include <stdlib.h>
-/*
-     #define IDENTIFICADOR 258
-     #define NUMERO_INTEIRO 259
-     #define NUMERO_REAL 260
-     #define BEGN 261
-     #define DO 262
-     #define ELSE 263
-     #define END 264
-     #define IF 265
-     #define INTEGER 266
-     #define PROCEDURE 267
-     #define PROGRAM 268
-     #define READ 269
-     #define REAL 270
-     #define REPEAT 271
-     #define THEN 272
-     #define UNTIL 273
-     #define VAR 274
-     #define WHILE 275
-     #define WRITE 276
-     #define A_PAR 277
-     #define F_PAR 278
-     #define VZS 279
-     #define MAIS 280
-     #define VIRG 281
-     #define MENOS 282
-     #define PONTO 283
-     #define DIV 284
-     #define RECEBE 285
-     #define DP 286
-     #define PV 287
-     #define DIF 288
-     #define MENORI 289
-     #define MENOR 290
-     #define IGUAL 291
-     #define MAIORI 292
-     #define MAIOR 293
-     #define IDENTIFICADOR_NAO_ENCONTRADO 294
-     #define FIM_DA_ANALISE 295
-
-// constantes para saber o "tipo" do token lido
-#define IDENTIFICADOR  0
-#define NUMERO_INTEIRO 1
-#define NUMERO_REAL    2
-
-// constantes para verificacoes de erros durante o processamento
-#define IDENTIFICADOR_NAO_ENCONTRADO -1
-#define FIM_DA_ANALISE               -2
-*/
+#include "util/Simble.h"
+#include "util/Table.h"
 
 /* numero da linha atual a sendo testada 
 *  util para informacoes de erro 
 */
 extern int lineno;
+// Tabela de Simbolos
+extern Table *TS;
 
 int classify_identifier(char *token);
 /*%option noyywrap*/
-#line 538 "lex.yy.c"
+#line 502 "lex.yy.c"
 
 #define INITIAL 0
 
@@ -615,7 +579,12 @@ static int input (void );
 
 /* Amount of stuff to slurp up with each read. */
 #ifndef YY_READ_BUF_SIZE
+#ifdef __ia64__
+/* On IA-64, the buffer size is 16k, not 8k */
+#define YY_READ_BUF_SIZE 16384
+#else
 #define YY_READ_BUF_SIZE 8192
+#endif /* __ia64__ */
 #endif
 
 /* Copy whatever the last rule matched to the standard output. */
@@ -623,7 +592,7 @@ static int input (void );
 /* This used to be an fputs(), but since the string might contain NUL's,
  * we now use fwrite().
  */
-#define ECHO fwrite( yytext, yyleng, 1, yyout )
+#define ECHO do { if (fwrite( yytext, yyleng, 1, yyout )) {} } while (0)
 #endif
 
 /* Gets input and stuffs it into "buf".  number of characters read, or YY_NULL,
@@ -634,7 +603,7 @@ static int input (void );
 	if ( YY_CURRENT_BUFFER_LVALUE->yy_is_interactive ) \
 		{ \
 		int c = '*'; \
-		int n; \
+		size_t n; \
 		for ( n = 0; n < max_size && \
 			     (c = getc( yyin )) != EOF && c != '\n'; ++n ) \
 			buf[n] = (char) c; \
@@ -716,9 +685,9 @@ YY_DECL
 	register char *yy_cp, *yy_bp;
 	register int yy_act;
     
-#line 75 "identificadores.flex"
+#line 30 "identificadores.flex"
 
-#line 722 "lex.yy.c"
+#line 691 "lex.yy.c"
 
 	if ( !(yy_init) )
 		{
@@ -803,141 +772,141 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 76 "identificadores.flex"
-{ return classify_identifier(yytext); }
+#line 31 "identificadores.flex"
+{ strcpy(yylval.text,yytext); return classify_identifier(yytext); }
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 77 "identificadores.flex"
+#line 32 "identificadores.flex"
 { return NUMERO_INTEIRO; }
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 78 "identificadores.flex"
+#line 33 "identificadores.flex"
 { return NUMERO_REAL; }
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 80 "identificadores.flex"
+#line 35 "identificadores.flex"
 { return classify_identifier(yytext); }
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 81 "identificadores.flex"
+#line 36 "identificadores.flex"
 { return classify_identifier(yytext); }
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 82 "identificadores.flex"
+#line 37 "identificadores.flex"
 { return classify_identifier(yytext); }
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 83 "identificadores.flex"
+#line 38 "identificadores.flex"
 { return classify_identifier(yytext); }
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 84 "identificadores.flex"
+#line 39 "identificadores.flex"
 { return classify_identifier(yytext); }
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 85 "identificadores.flex"
+#line 40 "identificadores.flex"
 { return classify_identifier(yytext); }
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 86 "identificadores.flex"
+#line 41 "identificadores.flex"
 { return classify_identifier(yytext); }
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 87 "identificadores.flex"
+#line 42 "identificadores.flex"
 { return classify_identifier(yytext); }
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 88 "identificadores.flex"
+#line 43 "identificadores.flex"
 { return classify_identifier(yytext); }
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 89 "identificadores.flex"
+#line 44 "identificadores.flex"
 { return classify_identifier(yytext); }
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 90 "identificadores.flex"
+#line 45 "identificadores.flex"
 { return classify_identifier(yytext); }
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 91 "identificadores.flex"
+#line 46 "identificadores.flex"
 { return classify_identifier(yytext); }
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 92 "identificadores.flex"
+#line 47 "identificadores.flex"
 { return classify_identifier(yytext); }
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 93 "identificadores.flex"
+#line 48 "identificadores.flex"
 { return classify_identifier(yytext); }
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 94 "identificadores.flex"
+#line 49 "identificadores.flex"
 { return classify_identifier(yytext); }
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 95 "identificadores.flex"
+#line 50 "identificadores.flex"
 { return classify_identifier(yytext); }
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 96 "identificadores.flex"
+#line 51 "identificadores.flex"
 { return classify_identifier(yytext); }
 	YY_BREAK
 case 21:
 /* rule 21 can match eol */
 YY_RULE_SETUP
-#line 98 "identificadores.flex"
+#line 53 "identificadores.flex"
 { lineno++; }
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 100 "identificadores.flex"
+#line 55 "identificadores.flex"
 
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 101 "identificadores.flex"
+#line 56 "identificadores.flex"
 
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 103 "identificadores.flex"
+#line 58 "identificadores.flex"
 { fprintf(stderr, "Warning:%d: Identificador '%s' invalido.\n", lineno, yytext); return IDENTIFICADOR_NAO_ENCONTRADO; }
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 104 "identificadores.flex"
+#line 59 "identificadores.flex"
 { fprintf(stderr, "Warning:%d: Identificador '%s' invalido.\n", lineno, yytext); return IDENTIFICADOR_NAO_ENCONTRADO; }
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 105 "identificadores.flex"
+#line 60 "identificadores.flex"
 { fprintf(stderr, "Warning:%d: Identificador '%s' invalido.\n", lineno, yytext); return IDENTIFICADOR_NAO_ENCONTRADO; }
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 107 "identificadores.flex"
+#line 62 "identificadores.flex"
 ECHO;
 	YY_BREAK
-#line 941 "lex.yy.c"
+#line 910 "lex.yy.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -1695,8 +1664,8 @@ YY_BUFFER_STATE yy_scan_string (yyconst char * yystr )
 
 /** Setup the input buffer state to scan the given bytes. The next call to yylex() will
  * scan from a @e copy of @a bytes.
- * @param bytes the byte buffer to scan
- * @param len the number of bytes in the buffer pointed to by @a bytes.
+ * @param yybytes the byte buffer to scan
+ * @param _yybytes_len the number of bytes in the buffer pointed to by @a bytes.
  * 
  * @return the newly allocated buffer state object.
  */
@@ -1935,7 +1904,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 107 "identificadores.flex"
+#line 62 "identificadores.flex"
 
 
 int get_token (char **token) {

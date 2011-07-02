@@ -3,60 +3,15 @@
 /* includes necessarios */
 #include "sintatico.tab.h"
 #include <stdlib.h>
-/*
-     #define IDENTIFICADOR 258
-     #define NUMERO_INTEIRO 259
-     #define NUMERO_REAL 260
-     #define BEGN 261
-     #define DO 262
-     #define ELSE 263
-     #define END 264
-     #define IF 265
-     #define INTEGER 266
-     #define PROCEDURE 267
-     #define PROGRAM 268
-     #define READ 269
-     #define REAL 270
-     #define REPEAT 271
-     #define THEN 272
-     #define UNTIL 273
-     #define VAR 274
-     #define WHILE 275
-     #define WRITE 276
-     #define A_PAR 277
-     #define F_PAR 278
-     #define VZS 279
-     #define MAIS 280
-     #define VIRG 281
-     #define MENOS 282
-     #define PONTO 283
-     #define DIV 284
-     #define RECEBE 285
-     #define DP 286
-     #define PV 287
-     #define DIF 288
-     #define MENORI 289
-     #define MENOR 290
-     #define IGUAL 291
-     #define MAIORI 292
-     #define MAIOR 293
-     #define IDENTIFICADOR_NAO_ENCONTRADO 294
-     #define FIM_DA_ANALISE 295
-
-// constantes para saber o "tipo" do token lido
-#define IDENTIFICADOR  0
-#define NUMERO_INTEIRO 1
-#define NUMERO_REAL    2
-
-// constantes para verificacoes de erros durante o processamento
-#define IDENTIFICADOR_NAO_ENCONTRADO -1
-#define FIM_DA_ANALISE               -2
-*/
+#include "util/Simble.h"
+#include "util/Table.h"
 
 /* numero da linha atual a sendo testada 
 *  util para informacoes de erro 
 */
 extern int lineno;
+// Tabela de Simbolos
+extern Table *TS;
 
 int classify_identifier(char *token);
 %}
@@ -73,7 +28,7 @@ NUM_INT_ERRO         {NUMERO}+({LETRA}+{NUMERO}*)+
 NUM_REAL_ERRO        {NUMERO}+({LETRA}*{NUMERO}*)+\.(\.|{NUM_INT_ERRO}|{NUM_INTEIRO})+
 
 %%
-{IDENT}              { return classify_identifier(yytext); }
+{IDENT}              { strcpy(yylval.text,yytext); return classify_identifier(yytext); }
 {NUM_INTEIRO}        { return NUMERO_INTEIRO; }
 {NUM_REAL}           { return NUMERO_REAL; }
 

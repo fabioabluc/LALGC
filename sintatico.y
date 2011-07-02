@@ -1,6 +1,8 @@
 /* Pre-declaracao de includes e assinaturas de funcoes do lex */
 %{
 #include <stdio.h>
+#include "util/Simble.h"
+#include "util/Table.h"
 
 // Numero da linha
 int lineno = 1;
@@ -8,17 +10,29 @@ int lineno = 1;
 int synerr = 0;
 // Booleana para reportar erros
 int reperr = 0;
+// Tabela de simbolos
+Table *TS = NULL;
 
 int yylex (void);
 void yywrap(void);
 void yyerror(const char *);
 void errmsg(const char *msg);
+
 %}
+
+%union {
+	char text[50];
+	int integer;
+	float real;
+}
 
 /* Declaracao de tipos de tokens */
 %token IDENTIFICADOR
+%type <text> IDENTIFICADOR
 %token NUMERO_INTEIRO
+%type <integer> NUMERO_INTEIRO
 %token NUMERO_REAL
+%type <real> NUMERO_REAL
 %token BEGN
 %token DO
 %token ELSE
@@ -93,7 +107,14 @@ tipo_var :
 		error { if (reperr) errmsg("Tipo inválido."); reperr = 0; }
 		;
 variaveis :
-		IDENTIFICADOR mais_var
+		IDENTIFICADOR
+		{// Procura na tabela de simbolos
+			printf("IDENTIFICADOR: %s\n",yylval.text);
+			if (TableSearch(TS,yylval.text) != -1) {
+				
+			}
+		}
+		mais_var
 		;
 mais_var :
 		VIRG variaveis |
