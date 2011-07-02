@@ -28,3 +28,15 @@ clean:
 	
 zip: clean
 	zip -r LALGC ../LALGC/
+
+add:
+	git add .
+
+commit:
+	git commit -a -m 'commit default'
+
+pull: add commit
+	git pull
+
+push: pull
+	git push
