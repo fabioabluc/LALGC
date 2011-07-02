@@ -9,7 +9,7 @@ YFILES=sintatico.y
 CC=gcc
 CFLAGS=-Wall
 CLIBS=
-CFILES=$(shell find -name *.c)
+CFILES=$(shell find -name \*.c)
 OBJ=LALGC
 
 TESTE=testes/codigo_teste2.pas
