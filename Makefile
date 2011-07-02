@@ -9,8 +9,7 @@ YFILES=sintatico.y
 CC=gcc
 CFLAGS=-Wall
 CLIBS=
-HFILES=$(shell ls *.h)
-CFILES=$(shell ls *.c)
+CFILES=$(shell find -name *.c)
 OBJ=LALGC
 
 TESTE=testes/codigo_teste2.pas
@@ -18,7 +17,7 @@ TESTE=testes/codigo_teste2.pas
 all:
 	$(LEX) $(LEXFLAGS) $(LFILES)
 	$(YACC) $(YACCFLAGS) $(YFILES)
-	$(CC) $(CFLAGS) $(CLIBS) -o$(OBJ) $(CFILES)
+	$(CC) $(CFLAGS) $(CLIBS) -o $(OBJ) $(CFILES)
 
 run:
 	./$(OBJ) $(TESTE)
