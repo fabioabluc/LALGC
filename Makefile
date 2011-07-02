@@ -31,7 +31,7 @@ zip: clean
 add:
 	git add .
 
-commit:
+commit: clean
 	git commit -a -m 'commit default'
 
 pull: add commit
