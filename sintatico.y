@@ -4,6 +4,7 @@
 #include "util/Simble.h"
 #include "util/Table.h"
 #include "util/StackString.h"
+#include "util/Vector.h"
 
 // Numero da linha
 int lineno = 1;
@@ -77,7 +78,7 @@ void errmsg();
 %type <text> IDENTIFICADOR
 %type <integer> NUMERO_INTEIRO
 %type <real> NUMERO_REAL
-%type <constant> INTEGER REAL tipo_var id_cont expressao fator
+%type <constant> INTEGER REAL tipo_var id_cont expressao fator op_mul mais_fatores termo
 /* Supressor de mensagens de shift/reduce */
 %expect 7
 
@@ -150,11 +151,10 @@ tipo_var :
 		error { if (reperr) { errmsg(); fprintf(stderr,"Tipo inválido.\n"); } reperr = 0; }
 		;
 variaveis :
-		IDENTIFICADOR {
+		IDENTIFICADOR mais_var {
 			if (var_stack == NULL) var_stack = SSNew();
-			SSPush(var_stack,yylval.text);
+			SSPush(var_stack,$1);
 		}
-		mais_var
 		;
 mais_var :
 		VIRG variaveis |
@@ -171,6 +171,7 @@ dc_p :
 					Simble *proc = SimbleNew();
 					SimbleSetName(proc,yylval.text);
 					proc->classe = CLASSE_PRC;
+					proc->type = proc_id+1;
 					proc->argument = ARGUMENT_FALSE;
 					proc->from_proc = 0;
 					TableAdd(TS,proc);
@@ -178,20 +179,29 @@ dc_p :
 					// Identificador ja declarado
 					semerr = 1;
 					errmsg(); fprintf(stderr,"Identificador '%s' duplicado.\n",$2);
+					reperr = 1;
 				}
 			} else {
 				// Adiciona na tabela
 				Simble *proc = SimbleNew();
 				SimbleSetName(proc,yylval.text);
 				proc->classe = CLASSE_PRC;
-				proc->number = CLASSE_PRC;
+				proc->type = proc_id+1;
 				proc->argument = ARGUMENT_FALSE;
 				proc->from_proc = 0;
 				TableAdd(TS,proc);
 			}
 			++proc_id;
 		}
-		parametros pv corpo_p dc_p |
+		parametros {
+			if (!reperr) {
+				int indice = TableSearch(TS,$2);
+				Simble *proc = TS->simbolos[indice];
+				proc->number = TableSearchParams(TS,proc_id)->size;
+			}
+			reperr = 0;
+		}
+		pv corpo_p dc_p |
 		/*lambda*/ |
 		/* Producoes de erro */
 		PROCEDURE IDENTIFICADOR error '\n' { if (reperr) { errmsg(); fprintf(stderr,"Parametros nao reconhecidos.\n"); } reperr = 0; } corpo_p dc_p 
@@ -255,7 +265,10 @@ lista_arg :
 		/*lambda*/
 		;
 argumentos :
-		IDENTIFICADOR mais_ident
+		IDENTIFICADOR mais_ident {
+			if (var_stack == NULL) var_stack = SSNew();
+			SSPush(var_stack,$1);
+		}
 		;
 mais_ident :
 		PV argumentos |
@@ -322,15 +335,27 @@ cmd :
 				symbol = TS->simbolos[indice];
 			}
 		} 
-		id_cont |
+		id_cont {
+			int indice = TableSearchFromProc(TS,$1,proc_id);
+			if (indice == -1) {
+				// Identificador não encontrado
+				semerr = 1;
+				errmsg(); fprintf(stderr,"Identificador '%s' não encontrado.\n",$1);				
+			} else {
+				if (TS->simbolos[indice]->type != $3) {
+					semerr = 1;
+					//errmsg(); fprintf(stderr,"Atribuicao de tipos incompatíveis.\n");
+				}
+			}
+
+		} |
 		BEGN comandos END				|
 		/* Producoes de erro */
 		error { if (reperr) { errmsg(); fprintf(stderr,"Comando não reconhecido.\n"); yyclearin; } reperr = 0; } |
 		IF condicao error { if (reperr) { errmsg(); fprintf(stderr,"'then' esperado.\n"); } yyerrok; reperr = 0; } cmd pfalsa
 		;
 id_cont :
-		RECEBE
-		{	// TODO: Verificar se symbol existe pra nao dah SEGFAULT
+		RECEBE {	
 			if (symbol != NULL && symbol->classe != CLASSE_VAR) {
 				semerr = 1;
 				errmsg(); fprintf(stderr,"Identificador '%s' não é uma variável.\n",symbol->name);
@@ -339,7 +364,39 @@ id_cont :
 		}
 		expressao { $$ = $3; } |
 		lista_arg {
-			// TODO: Verificaćão de parametros.
+			if (symbol != NULL) {
+				int indice = TableSearchNCS(TS,symbol->name,CLASSE_PRC,proc_id);
+				if (indice != -1) {
+					Simble *proc = TS->simbolos[indice];
+					if (proc->number == SSSize(var_stack)) {
+						Vector *formal = TableSearchParams(TS,proc->type);
+						int i;
+						for (i = 0; i < formal->size; i++) {
+							char *real_name = SSPop(var_stack);
+							indice = TableSearchNCS(TS,real_name,CLASSE_VAR,proc_id);
+							if (indice != -1) {
+								Simble *real = TS->simbolos[indice];
+								Simble *form = TS->simbolos[formal->simbolos[i]];
+								if (real->type != form->type) {
+									semerr = 1;
+									errmsg(); fprintf(stderr,"Parâmetro %d do procedimento '%s'. Tipo de '%s' incompatível.\n",i+1,proc->name,real->name);
+								}
+							} else {
+								semerr = 1;
+								//Parametro real invalido
+								errmsg(); fprintf(stderr,"Parâmetro '%s' não encontrado.\n",real_name);
+							}
+						}
+					} else {
+						semerr = 1;
+						errmsg(); fprintf(stderr,"Número de parâmetros de '%s' inválido.\n",proc->name);
+					}
+				} else {
+					semerr = 1;
+					errmsg(); fprintf(stderr,"Procedimento '%s' não declarado.\n",symbol->name);
+				}
+			}
+			symbol = NULL;
 		}
 		;
 condicao :
@@ -356,7 +413,7 @@ relacao :
 		MENOR
 		;
 expressao :
-		termo outros_termos |
+		termo outros_termos { $$ = $1; } |
 		/* Producoes de erro */
 		error { if (reperr) { errmsg(); fprintf(stderr,"Expressao invalida.\n"); } reperr = 0; }
 		;
@@ -376,15 +433,21 @@ op_ad :
 		MENOS
 		;
 termo :
-		op_un fator mais_fatores
+		op_un fator mais_fatores { $$ = $2; }
 		;
 mais_fatores :
-		op_mul fator mais_fatores |
+		op_mul fator mais_fatores {
+			if ($1 == DIV && $2 == TYPE_REAL) {
+				semerr = 1;
+				errmsg(); fprintf(stderr,"Divisão por número real.\n");
+			}
+			$$ = $2;
+		} |
 		/*lambda*/
 		;
 op_mul :
-		VZS |
-		DIV |
+		VZS { $$ = VZS; } |
+		DIV { $$ = DIV; } |
 		;
 fator : IDENTIFICADOR {
 			//Verificando declaracao
@@ -393,13 +456,14 @@ fator : IDENTIFICADOR {
 				// Identificador não encontrado
 				semerr = 1;
 				errmsg(); fprintf(stderr,"Identificador '%s' não encontrado.\n", $1);
+				$$ = -1;
 			} else {
 				Simble *simbolo = TS->simbolos[indice];
 				$$ = simbolo->type;
 			}
 		} |
-		NUMERO_INTEIRO	|
-		NUMERO_REAL		|
+		NUMERO_INTEIRO { $$ = TYPE_INTEGER; } |
+		NUMERO_REAL	{ $$ = TYPE_REAL; } |
 		A_PAR expressao f_par
 		;
 /* REGRAS DE TRATAMENTO DE ERROS */
@@ -450,7 +514,4 @@ void yyerror(const char *s) {
 void errmsg() {
 	fprintf(stderr, "Erro:%d: ", lineno);
 }
-//void errmsg(const char *msg) {
-//	fprintf(stderr, "Erro:%d: %s\n", lineno, msg);
-//}
 

@@ -1,7 +1,7 @@
 program teste;
 
 var a, b : integer;
-var a, c : real;
+var a, c, d : real;
 
 procedure p (a,a:integer; b,c:real);
 var p1 : integer;
@@ -21,4 +21,6 @@ begin
 	p1 := 1;
 	read(a,c);
 	write(a,c);
+	p(a;c;c;d;e;f;g;h);
+	p2(a;c);
 end.
