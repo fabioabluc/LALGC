@@ -1,7 +1,12 @@
 program teste;
 
-var a, a : integer;
+var a, b : integer;
+
+procedure p (a,a:integer);
+begin
+	write(a);
+end;
 
 begin
-	{ sem erros lexicos }
+	p := 1;
 end.

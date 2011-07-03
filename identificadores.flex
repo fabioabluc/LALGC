@@ -10,7 +10,7 @@
 *  util para informacoes de erro 
 */
 extern int lineno;
-// Tabela de Simbolos
+// Tabelas de Simbolos
 extern Table *TS;
 
 int classify_identifier(char *token);

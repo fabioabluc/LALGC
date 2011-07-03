@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include "util/Simble.h"
 #include "util/Table.h"
-#include "util/Stack.h"
+#include "util/StackString.h"
 
 // Numero da linha
 int lineno = 1;
@@ -16,7 +16,9 @@ int reperr = 0;
 // Tabela de simbolos
 Table *TS = NULL;
 // Lista de variaveis para a regra variaveis
-StackInterval *var_stack = NULL;
+StackString *var_stack = NULL;
+Simble *symbol = NULL;
+int proc_id = 0;
 
 int yylex (void);
 void yywrap(void);
@@ -29,15 +31,13 @@ void errmsg(const char *msg);
 	char text[50];
 	int integer;
 	float real;
+	int constant;
 }
 
 /* Declaracao de tipos de tokens */
 %token IDENTIFICADOR
-%type <text> IDENTIFICADOR
 %token NUMERO_INTEIRO
-%type <integer> NUMERO_INTEIRO
 %token NUMERO_REAL
-%type <real> NUMERO_REAL
 %token BEGN
 %token DO
 %token ELSE
@@ -74,8 +74,12 @@ void errmsg(const char *msg);
 %token IDENTIFICADOR_NAO_ENCONTRADO
 %token FIM_DA_ANALISE
 
+%type <text> IDENTIFICADOR
+%type <integer> NUMERO_INTEIRO
+%type <real> NUMERO_REAL
+%type <constant> INTEGER REAL tipo_var id_cont
 /* Supressor de mensagens de shift/reduce */
-%expect 6
+%expect 7
 
 /* Mensagens de Erro */
 %error-verbose
@@ -99,8 +103,39 @@ dc :
 		dc_v dc_p
 		;
 dc_v :
-		VAR { var_stack =  SINew(); } 
-		variaveis dp tipo_var PV dc_v |
+		VAR variaveis dp tipo_var {
+			// Adiciona na tabela
+			while (SSSize(var_stack) > 0) {
+				char *var_name = SSPop(var_stack);
+				int indice = TableSearch(TS,var_name);
+				if (indice != -1) {
+					Simble *var = TS->simbolos[indice];
+					if (var->classe == CLASSE_VAR && var->argument == ARGUMENT_FALSE) {
+						// Identificador ja declarado
+						semerr = 1;
+						errmsg("Identificador duplicado.");
+					} else {
+						Simble *var = SimbleNew();
+						SimbleSetName(var,var_name);
+						var->classe = CLASSE_VAR;
+						var->type = $4; // $4 = tipo_var.tipo
+						var->value = 0;
+						var->argument = ARGUMENT_FALSE;
+						TableAdd(TS,var);
+					}
+				} else {
+					Simble *var = SimbleNew();
+					SimbleSetName(var,var_name);
+					var->classe = CLASSE_VAR;
+					var->type = $4; // $4 = tipo_var.tipo
+					var->value = 0;
+					var->argument = ARGUMENT_FALSE;
+					TableAdd(TS,var);
+				}
+			}
+			var_stack = SSNew();
+		}
+		PV dc_v |
 		/*lambda*/ |
 		/* Producoes de erro */
 		VAR variaveis dp error PV { if (reperr) errmsg("Tipo invalido."); yyerrok; reperr = 0; }  dc_v |
@@ -108,25 +143,14 @@ dc_v :
 		VAR error { if (reperr) errmsg("Declaracao de variavel invalida."); reperr = 0; }
 		;
 tipo_var :
-		REAL |
-		INTEGER |
+		REAL { $$ = TYPE_REAL; } |
+		INTEGER { $$ = TYPE_INTEGER; } |
 		error { if (reperr) errmsg("Tipo inválido."); reperr = 0; }
 		;
 variaveis :
-		IDENTIFICADOR
-		{	//printf("IDENTIFICADOR: %s\n",yylval.text);
-			// Procura na tabela de simbolos
-			if (TableSearch(TS,yylval.text) != -1) {
-				// Identificador ja declarado
-				semerr = 1;
-				errmsg("Identificador duplicado.");
-			} else {
-				// Adiciona na tabela
-				Simble *var = SimbleNew();
-				SimbleSetName(var,yylval.text);
-				var->classe = CLASSE_VAR;
-				TableAdd(TS,var);
-			}
+		IDENTIFICADOR {
+			if (var_stack == NULL) var_stack = SSNew();
+			SSPush(var_stack,yylval.text);
 		}
 		mais_var
 		;
@@ -135,18 +159,34 @@ mais_var :
 		/*lambda*/
 		;
 dc_p :
-		PROCEDURE IDENTIFICADOR
-		{	// Procura na tabela de simbolos
-			if (TableSearch(TS,yylval.text) != -1) {
-				// Identificador ja declarado
-				semerr = 1;
-				errmsg("Identificador duplicado.");
+		PROCEDURE IDENTIFICADOR {
+			// Procura na tabela de simbolos
+			int indice = TableSearch(TS,$2);
+			if (indice != -1) {
+				Simble *proc = TS->simbolos[indice];
+				if (proc->classe != CLASSE_PRC) {
+					// Adiciona na tabela
+					Simble *proc = SimbleNew();
+					SimbleSetName(proc,yylval.text);
+					proc->classe = CLASSE_PRC;
+					proc->number = CLASSE_PRC;
+					proc->argument = ARGUMENT_FALSE;
+					proc->from_proc = proc_id++;
+					TableAdd(TS,proc);
+				} else {
+					// Identificador ja declarado
+					semerr = 1;
+					errmsg("Identificador duplicado.");
+				}
 			} else {
 				// Adiciona na tabela
-				Simble *prc = SimbleNew();
-				SimbleSetName(prc,yylval.text);
-				prc->classe = CLASSE_PRC;
-				TableAdd(TS,prc);
+				Simble *proc = SimbleNew();
+				SimbleSetName(proc,yylval.text);
+				proc->classe = CLASSE_PRC;
+				proc->number = CLASSE_PRC;
+				proc->argument = ARGUMENT_FALSE;
+				proc->from_proc = proc_id++;
+				TableAdd(TS,proc);
 			}
 		}
 		parametros pv corpo_p dc_p |
@@ -161,7 +201,38 @@ parametros :
 		A_PAR error F_PAR { if (reperr) errmsg("Parametros nao reconhecidos."); reperr = 0; }
 		;
 lista_par :
-		variaveis dp tipo_var mais_par
+		variaveis dp tipo_var {
+			// Adiciona na tabela
+			while (SSSize(var_stack) > 0) {
+				char *var_name = SSPop(var_stack);
+				int indice = TableSearch(TS,var_name);
+				if (indice != -1) {
+					Simble *param = TS->simbolos[indice];
+					printf("SIMBLE: %s\n",SimbleToString(param));
+					if (param->argument == ARGUMENT_TRUE 
+							&& param->from_proc == proc_id) {
+						// Parametro ja declarado
+						semerr = 1;
+						errmsg("Parâmetro duplicado.");
+					} else {
+						Simble *param = SimbleNew();
+						SimbleSetName(param,var_name);
+						param->type = $3; // $3 = tipo_var.tipo
+						param->argument = ARGUMENT_TRUE;
+						param->from_proc = proc_id;
+						TableAdd(TS,param);
+					}
+				} else {
+					Simble *param = SimbleNew();
+					SimbleSetName(param,var_name);
+					param->type = $3; // $3 = tipo_var.tipo
+					param->argument = ARGUMENT_TRUE;
+					param->from_proc = proc_id;
+					TableAdd(TS,param);
+				}
+			}
+		}
+		mais_par
 		;
 mais_par :
 		PV lista_par |
@@ -201,7 +272,7 @@ cmd :
 		WHILE condicao DO cmd 			|
 		REPEAT cmd UNTIL condicao		|
 		IF condicao THEN cmd pfalsa 	|
-		IDENTIFICADOR
+		IDENTIFICADOR 
 		{	//Verificando declaracao
 			int indice = TableSearch(TS,yylval.text);
 			if (indice == -1) {
@@ -209,22 +280,25 @@ cmd :
 				semerr = 1;
 				errmsg("Identificador não encontrado.");
 			} else {
-				int id_class = TS->simbolos[indice]->classe;
+				symbol = TS->simbolos[indice];
 			}
-		}
-		id_cont			|
+		} 
+		id_cont |
 		BEGN comandos END				|
 		/* Producoes de erro */
 		error { if (reperr) errmsg("Comando não reconhecido."); yyclearin; reperr = 0; } |
 		IF condicao error { if (reperr) errmsg("'then' esperado."); yyerrok; reperr = 0; } cmd pfalsa
 		;
 id_cont :
-		RECEBE expressao
+		RECEBE
 		{	
-			if (id_class != CLASSE_VAR) {
+			if (symbol->classe != CLASSE_VAR) {
+				semerr = 1;
 				errmsg("Identificador não é uma variável.");
-		} |
-		lista_arg {}
+			}
+		}
+		expressao |
+		lista_arg
 		;
 condicao :
 		expressao relacao expressao |
@@ -300,11 +374,12 @@ f_par :
 // Chamada quando encontra um fim de arquivo
 void yywrap(void) {
 	fflush(stderr);
-	fprintf(stdout, "FIM DA ANALISE"); fflush(stdout);
-	if (synerr) {
-		fprintf(stdout,": 'syntax error'\n");
+	fprintf(stdout, "FIM DA ANALISE\n"); fflush(stdout);
+	if (synerr || semerr) {
+		if (synerr) fprintf(stdout,"Erro sintático encontrado.\n");
+		if (semerr) fprintf(stdout,"Erro semântico encontrado.\n");
 	} else {
-		fprintf(stdout,": Compilacao concluida com sucesso.\n");
+		fprintf(stdout,"Compilacao concluida com sucesso.\n");
 	}
 }
 // Chamada quando encontra um erro
