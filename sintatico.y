@@ -8,6 +8,8 @@
 
 // Numero da linha
 int lineno = 1;
+// Booleana para erros léxicos
+int lexerr = 0;
 // Booleana para erros sintaticos
 int synerr = 0;
 // Booleana para erros semanticos
@@ -490,7 +492,8 @@ f_par :
 void yywrap(void) {
 	fflush(stderr);
 	fprintf(stdout, "FIM DA ANALISE\n"); fflush(stdout);
-	if (synerr || semerr) {
+	if (lexerr || synerr || semerr) {
+		if (lexerr) fprintf(stdout,"Erro léxico encontrado.\n");
 		if (synerr) fprintf(stdout,"Erro sintático encontrado.\n");
 		if (semerr) fprintf(stdout,"Erro semântico encontrado.\n");
 	} else {

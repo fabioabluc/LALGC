@@ -12,6 +12,8 @@
 extern int lineno;
 // Tabelas de Simbolos
 extern Table *TS;
+// Boolean para indicaćão de erro lexico
+extern int lexerr;
 
 int classify_identifier(char *token);
 %}
@@ -55,9 +57,9 @@ NUM_REAL_ERRO        {NUMERO}+({LETRA}*{NUMERO}*)+\.(\.|{NUM_INT_ERRO}|{NUM_INTE
 "{"[^}\n]*"}"
 [ \t]+
 
-{NUM_INT_ERRO}       { fprintf(stderr, "Warning:%d: Identificador '%s' invalido.\n", lineno, yytext); return IDENTIFICADOR_NAO_ENCONTRADO; }
-{NUM_REAL_ERRO}      { fprintf(stderr, "Warning:%d: Identificador '%s' invalido.\n", lineno, yytext); return IDENTIFICADOR_NAO_ENCONTRADO; }
-.                    { fprintf(stderr, "Warning:%d: Identificador '%s' invalido.\n", lineno, yytext); return IDENTIFICADOR_NAO_ENCONTRADO; }
+{NUM_INT_ERRO}       { lexerr = 1; fprintf(stderr, "Warning:%d: Identificador '%s' invalido.\n", lineno, yytext); return IDENTIFICADOR_NAO_ENCONTRADO; }
+{NUM_REAL_ERRO}      { lexerr = 1; fprintf(stderr, "Warning:%d: Identificador '%s' invalido.\n", lineno, yytext); return IDENTIFICADOR_NAO_ENCONTRADO; }
+.                    { lexerr = 1; fprintf(stderr, "Warning:%d: Identificador '%s' invalido.\n", lineno, yytext); return IDENTIFICADOR_NAO_ENCONTRADO; }
 
 %%
 int get_token (char **token) {
