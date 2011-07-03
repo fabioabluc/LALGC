@@ -112,7 +112,7 @@ int TableSearch (Table *v, char *name) {
 }
 
 // busca por nome e from_proc
-int TabelSearchFromProc (Table *v, char *name, int from_proc) {
+int TableSearchFromProc (Table *v, char *name, int from_proc) {
 	int i;
 	for (i = 0; i < v->size; i++) {
 		// procura por from_proc
@@ -120,6 +120,20 @@ int TabelSearchFromProc (Table *v, char *name, int from_proc) {
 			// procura por name
 			if (strcmp(v->simbolos[i]->name, name) == 0)
 				return i;
+	}
+	return -1;
+}
+
+int TableSearchNCS (Table *v, char *name, int classe, int scope) {
+	int i;
+	for (i = 0; i < v->size; i++) {
+		// procura por classe
+		if (v->simbolos[i]->classe == classe)
+			// procura por escopo
+			if (v->simbolos[i]->scope == scope)
+				// procura por name
+				if (strcmp(v->simbolos[i]->name, name) == 0)
+					return i;
 	}
 	return -1;
 }
