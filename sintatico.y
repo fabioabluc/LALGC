@@ -107,10 +107,10 @@ dc_v :
 			// Adiciona na tabela
 			while (SSSize(var_stack) > 0) {
 				char *var_name = SSPop(var_stack);
-				int indice = TableSearch(TS,var_name);
+				int indice = TableSearchNCS(TS,var_name,CLASSE_VAR,proc_id);
 				if (indice != -1) {
 					Simble *var = TS->simbolos[indice];
-					if (var->classe == CLASSE_VAR && var->argument == ARGUMENT_FALSE) {
+					if (var->argument == ARGUMENT_FALSE) {
 						// Identificador ja declarado
 						semerr = 1;
 						errmsg("Identificador duplicado.");
@@ -133,7 +133,7 @@ dc_v :
 					TableAdd(TS,var);
 				}
 			}
-			var_stack = SSNew();
+			var_stack = NULL;
 		}
 		PV dc_v |
 		/*lambda*/ |
@@ -169,9 +169,8 @@ dc_p :
 					Simble *proc = SimbleNew();
 					SimbleSetName(proc,yylval.text);
 					proc->classe = CLASSE_PRC;
-					proc->number = CLASSE_PRC;
 					proc->argument = ARGUMENT_FALSE;
-					proc->from_proc = proc_id++;
+					proc->from_proc = proc_id;
 					TableAdd(TS,proc);
 				} else {
 					// Identificador ja declarado
@@ -188,6 +187,7 @@ dc_p :
 				proc->from_proc = proc_id++;
 				TableAdd(TS,proc);
 			}
+			++proc_id;
 		}
 		parametros pv corpo_p dc_p |
 		/*lambda*/ |
@@ -208,7 +208,6 @@ lista_par :
 				int indice = TableSearchFromProc(TS,var_name,proc_id);
 				if (indice != -1) {
 					Simble *param = TS->simbolos[indice];
-					printf("SIMBLE: %s\n",SimbleToString(param));
 					if (param->argument == ARGUMENT_TRUE 
 							&& param->from_proc == proc_id) {
 						// Parametro ja declarado
@@ -231,6 +230,7 @@ lista_par :
 					TableAdd(TS,param);
 				}
 			}
+			var_stack = SSNew();
 		}
 		mais_par
 		;
@@ -267,13 +267,49 @@ comandos :
 		/*lambda*/
 		;
 cmd :
-		READ a_par variaveis f_par 		|
-		WRITE a_par variaveis f_par		|
+		READ a_par variaveis f_par {
+			int var_type = -1;
+			while (!SSEmpty(var_stack)) {
+				char *var_name = SSPop(var_stack);
+				int indice = TableSearchNCS(TS,var_name,CLASSE_VAR,proc_id);
+				if (indice != -1) {
+					Simble *var = TS->simbolos[indice];
+					if (var_type == -1) var_type = var->type;
+					else if (var_type != var->type) {
+						semerr = 1;
+						errmsg("READ com variáveis de tipos diferentes.");
+						break;
+					}
+				} else {
+					semerr = 1;
+					errmsg("Variável não declarada.");
+				}
+			}
+		} |
+		WRITE a_par variaveis f_par	{
+			int var_type = -1;
+			while (!SSEmpty(var_stack)) {
+				char *var_name = SSPop(var_stack);
+				int indice = TableSearchNCS(TS,var_name,CLASSE_VAR,proc_id);
+				if (indice != -1) {
+					Simble *var = TS->simbolos[indice];
+					if (var_type == -1) var_type = var->type;
+					else if (var_type != var->type) {
+						semerr = 1;
+						errmsg("WRITE com variáveis de tipos diferentes.");
+						break;
+					}
+				} else {
+					semerr = 1;
+					errmsg("Variável não declarada.");
+				}
+			}
+		} |
 		WHILE condicao DO cmd 			|
 		REPEAT cmd UNTIL condicao		|
 		IF condicao THEN cmd pfalsa 	|
-		IDENTIFICADOR 
-		{	//Verificando declaracao
+		IDENTIFICADOR {
+			//Verificando declaracao
 			int indice = TableSearch(TS,yylval.text);
 			if (indice == -1) {
 				// Identificador não encontrado
