@@ -23,7 +23,7 @@ int proc_id = 0;
 int yylex (void);
 void yywrap(void);
 void yyerror(const char *);
-void errmsg(const char *msg);
+void errmsg();
 
 %}
 
@@ -77,7 +77,7 @@ void errmsg(const char *msg);
 %type <text> IDENTIFICADOR
 %type <integer> NUMERO_INTEIRO
 %type <real> NUMERO_REAL
-%type <constant> INTEGER REAL tipo_var id_cont expressao
+%type <constant> INTEGER REAL tipo_var id_cont expressao fator
 /* Supressor de mensagens de shift/reduce */
 %expect 7
 
@@ -89,18 +89,18 @@ void errmsg(const char *msg);
 programa :
 		PROGRAM IDENTIFICADOR pv corpo ponto |
 		/* Producoes de erro */
-		error { if (reperr) errmsg("'program' esperado."); reperr = 0; } PV corpo ponto 	|
-		error { if (reperr) errmsg("'program' esperado."); reperr = 0; } corpo ponto 		|
-		PROGRAM error { if (reperr) errmsg("Identificador esperado."); reperr = 0; } pv corpo ponto
+		error { if (reperr) { errmsg(); fprintf(stderr,"'program' esperado.\n"); } reperr = 0; } PV corpo ponto 	|
+		error { if (reperr) { errmsg(); fprintf(stderr,"'program' esperado.\n"); } reperr = 0; } corpo ponto 		|
+		PROGRAM error { if (reperr) { errmsg(); fprintf(stderr,"Identificador esperado.\n"); } reperr = 0; } pv corpo ponto
 		;
 corpo :
 		dc BEGN comandos END |
 		/* Producoes de erro */
-		dc BEGN comandos PV error PONTO { if (reperr) errmsg("'end' esperado."); reperr = 0; } |
-		dc error { if (reperr) errmsg("'begin' esperado.");  yyclearin; yyerrok; reperr = 0; } comandos END
+		dc BEGN comandos PV error PONTO { if (reperr) { errmsg(); fprintf(stderr,"'end' esperado.\n"); } reperr = 0; } |
+		dc error { if (reperr) { errmsg(); fprintf(stderr,"'begin' esperado.\n"); }  yyclearin; yyerrok; reperr = 0; } comandos END
 		;
 dc :
-		dc_v dc_p
+		dc_v dc_p { proc_id = 0; } 
 		;
 dc_v :
 		VAR variaveis dp tipo_var {
@@ -113,7 +113,7 @@ dc_v :
 					if (var->argument == ARGUMENT_FALSE) {
 						// Identificador ja declarado
 						semerr = 1;
-						errmsg("Identificador duplicado.");
+						errmsg(); fprintf(stderr,"Identificador '%s' duplicado.\n", var_name);
 					} else {
 						Simble *var = SimbleNew();
 						SimbleSetName(var,var_name);
@@ -121,6 +121,7 @@ dc_v :
 						var->type = $4; // $4 = tipo_var.tipo
 						var->value = 0;
 						var->argument = ARGUMENT_FALSE;
+						var->from_proc = proc_id;
 						TableAdd(TS,var);
 					}
 				} else {
@@ -130,6 +131,7 @@ dc_v :
 					var->type = $4; // $4 = tipo_var.tipo
 					var->value = 0;
 					var->argument = ARGUMENT_FALSE;
+					var->from_proc = proc_id;
 					TableAdd(TS,var);
 				}
 			}
@@ -138,14 +140,14 @@ dc_v :
 		PV dc_v |
 		/*lambda*/ |
 		/* Producoes de erro */
-		VAR variaveis dp error PV { if (reperr) errmsg("Tipo invalido."); yyerrok; reperr = 0; }  dc_v |
-		VAR variaveis dp tipo_var error { if (reperr) errmsg("';' faltando depois da declaracao de variavel."); yyerrok; reperr = 0; }  dc_v |
-		VAR error { if (reperr) errmsg("Declaracao de variavel invalida."); reperr = 0; }
+		VAR variaveis dp error PV { if (reperr) { errmsg(); fprintf(stderr,"Tipo invalido.\n"); } yyerrok; reperr = 0; }  dc_v |
+		VAR variaveis dp tipo_var error { if (reperr) { errmsg(); fprintf(stderr,"';' faltando depois da declaracao de variavel.\n"); } yyerrok; reperr = 0; }  dc_v |
+		VAR error { if (reperr) { errmsg(); fprintf(stderr,"Declaracao de variavel invalida.\n"); } reperr = 0; }
 		;
 tipo_var :
 		REAL { $$ = TYPE_REAL; } |
 		INTEGER { $$ = TYPE_INTEGER; } |
-		error { if (reperr) errmsg("Tipo inválido."); reperr = 0; }
+		error { if (reperr) { errmsg(); fprintf(stderr,"Tipo inválido.\n"); } reperr = 0; }
 		;
 variaveis :
 		IDENTIFICADOR {
@@ -170,12 +172,12 @@ dc_p :
 					SimbleSetName(proc,yylval.text);
 					proc->classe = CLASSE_PRC;
 					proc->argument = ARGUMENT_FALSE;
-					proc->from_proc = proc_id;
+					proc->from_proc = 0;
 					TableAdd(TS,proc);
 				} else {
 					// Identificador ja declarado
 					semerr = 1;
-					errmsg("Identificador duplicado.");
+					errmsg(); fprintf(stderr,"Identificador '%s' duplicado.\n",$2);
 				}
 			} else {
 				// Adiciona na tabela
@@ -184,7 +186,7 @@ dc_p :
 				proc->classe = CLASSE_PRC;
 				proc->number = CLASSE_PRC;
 				proc->argument = ARGUMENT_FALSE;
-				proc->from_proc = proc_id++;
+				proc->from_proc = 0;
 				TableAdd(TS,proc);
 			}
 			++proc_id;
@@ -192,13 +194,13 @@ dc_p :
 		parametros pv corpo_p dc_p |
 		/*lambda*/ |
 		/* Producoes de erro */
-		PROCEDURE IDENTIFICADOR error '\n' { if (reperr) errmsg("Parametros nao reconhecidos."); reperr = 0; } corpo_p dc_p 
+		PROCEDURE IDENTIFICADOR error '\n' { if (reperr) { errmsg(); fprintf(stderr,"Parametros nao reconhecidos.\n"); } reperr = 0; } corpo_p dc_p 
 		;
 parametros :
 		a_par lista_par f_par |
 		/*lambda*/ |
 		/* Producoes de erro */
-		A_PAR error F_PAR { if (reperr) errmsg("Parametros nao reconhecidos."); reperr = 0; }
+		A_PAR error F_PAR { if (reperr) { errmsg(); fprintf(stderr,"Parametros nao reconhecidos.\n"); } reperr = 0; }
 		;
 lista_par :
 		variaveis dp tipo_var {
@@ -208,14 +210,14 @@ lista_par :
 				int indice = TableSearchFromProc(TS,var_name,proc_id);
 				if (indice != -1) {
 					Simble *param = TS->simbolos[indice];
-					if (param->argument == ARGUMENT_TRUE 
-							&& param->from_proc == proc_id) {
+					if (param->argument == ARGUMENT_TRUE) {
 						// Parametro ja declarado
 						semerr = 1;
-						errmsg("Parâmetro duplicado.");
+						errmsg(); fprintf(stderr,"Parâmetro '%s' duplicado.\n",var_name);
 					} else {
 						Simble *param = SimbleNew();
 						SimbleSetName(param,var_name);
+						param->classe = CLASSE_VAR;
 						param->type = $3; // $3 = tipo_var.tipo
 						param->argument = ARGUMENT_TRUE;
 						param->from_proc = proc_id;
@@ -224,13 +226,14 @@ lista_par :
 				} else {
 					Simble *param = SimbleNew();
 					SimbleSetName(param,var_name);
+					param->classe = CLASSE_VAR;
 					param->type = $3; // $3 = tipo_var.tipo
 					param->argument = ARGUMENT_TRUE;
 					param->from_proc = proc_id;
 					TableAdd(TS,param);
 				}
 			}
-			var_stack = SSNew();
+			var_stack = NULL;
 		}
 		mais_par
 		;
@@ -241,8 +244,8 @@ mais_par :
 corpo_p :
 		dc_loc BEGN comandos END pv |
 		/* Producoes de erro */
-		error BEGN { if (reperr) errmsg("Declaracao local nao reconhecida."); reperr = 0; } comandos END pv |
-		dc_loc error { if (reperr) errmsg("'begin' do procedimento esperado."); yyerrok; reperr = 0; } comandos END pv
+		error BEGN { if (reperr) { errmsg(); fprintf(stderr,"Declaracao local nao reconhecida.\n"); } reperr = 0; } comandos END pv |
+		dc_loc error { if (reperr) { errmsg(); fprintf(stderr,"'begin' do procedimento esperado.\n"); } yyerrok; reperr = 0; } comandos END pv
 		;
 dc_loc :
 		dc_v
@@ -277,12 +280,12 @@ cmd :
 					if (var_type == -1) var_type = var->type;
 					else if (var_type != var->type) {
 						semerr = 1;
-						errmsg("READ com variáveis de tipos diferentes.");
+						errmsg(); fprintf(stderr,"READ com variáveis de tipos diferentes.\n");
 						break;
 					}
 				} else {
 					semerr = 1;
-					errmsg("Variável não declarada.");
+					errmsg(); fprintf(stderr,"Variável '%s' não declarada.\n",var_name);
 				}
 			}
 		} |
@@ -296,12 +299,12 @@ cmd :
 					if (var_type == -1) var_type = var->type;
 					else if (var_type != var->type) {
 						semerr = 1;
-						errmsg("WRITE com variáveis de tipos diferentes.");
+						errmsg(); fprintf(stderr,"WRITE com variáveis de tipos diferentes.\n");
 						break;
 					}
 				} else {
 					semerr = 1;
-					errmsg("Variável não declarada.");
+					errmsg(); fprintf(stderr,"Variável '%s' não declarada.\n",var_name);
 				}
 			}
 		} |
@@ -310,11 +313,11 @@ cmd :
 		IF condicao THEN cmd pfalsa 	|
 		IDENTIFICADOR {
 			//Verificando declaracao
-			int indice = TableSearch(TS,yylval.text);
+			int indice = TableSearchFromProc(TS,$1,proc_id);
 			if (indice == -1) {
 				// Identificador não encontrado
 				semerr = 1;
-				errmsg("Identificador não encontrado.");
+				errmsg(); fprintf(stderr,"Identificador '%s' não encontrado.\n",$1);
 			} else {
 				symbol = TS->simbolos[indice];
 			}
@@ -322,24 +325,27 @@ cmd :
 		id_cont |
 		BEGN comandos END				|
 		/* Producoes de erro */
-		error { if (reperr) errmsg("Comando não reconhecido."); yyclearin; reperr = 0; } |
-		IF condicao error { if (reperr) errmsg("'then' esperado."); yyerrok; reperr = 0; } cmd pfalsa
+		error { if (reperr) { errmsg(); fprintf(stderr,"Comando não reconhecido.\n"); yyclearin; } reperr = 0; } |
+		IF condicao error { if (reperr) { errmsg(); fprintf(stderr,"'then' esperado.\n"); } yyerrok; reperr = 0; } cmd pfalsa
 		;
 id_cont :
 		RECEBE
-		{	
-			if (symbol->classe != CLASSE_VAR) {
+		{	// TODO: Verificar se symbol existe pra nao dah SEGFAULT
+			if (symbol != NULL && symbol->classe != CLASSE_VAR) {
 				semerr = 1;
-				errmsg("Identificador não é uma variável.");
+				errmsg(); fprintf(stderr,"Identificador '%s' não é uma variável.\n",symbol->name);
 			}
+			symbol = NULL;
 		}
 		expressao { $$ = $3; } |
-		lista_arg
+		lista_arg {
+			// TODO: Verificaćão de parametros.
+		}
 		;
 condicao :
 		expressao relacao expressao |
 		/* Producoes de erro */
-		error { if (reperr) errmsg("Condicao invalida."); reperr = 0; }
+		error { if (reperr) { errmsg(); fprintf(stderr,"Condicao invalida.\n"); } reperr = 0; }
 		;
 relacao :
 		IGUAL 	|
@@ -352,7 +358,7 @@ relacao :
 expressao :
 		termo outros_termos |
 		/* Producoes de erro */
-		error { if (reperr) errmsg("Expressao invalida."); reperr = 0; }
+		error { if (reperr) { errmsg(); fprintf(stderr,"Expressao invalida.\n"); } reperr = 0; }
 		;
 op_un :
 		MAIS |
@@ -363,7 +369,7 @@ outros_termos :
 		op_ad termo outros_termos |
 		/*lambda*/ |
 		/* Producoes de erro */
-		op_ad error { if (reperr) errmsg("Operacao invalida."); yyerrok; reperr = 0; }
+		op_ad error { if (reperr) { errmsg(); fprintf(stderr,"Operacao invalida.\n"); } yyerrok; reperr = 0; }
 		;
 op_ad :
 		MAIS |
@@ -380,7 +386,18 @@ op_mul :
 		VZS |
 		DIV |
 		;
-fator : IDENTIFICADOR 	|
+fator : IDENTIFICADOR {
+			//Verificando declaracao
+			int indice = TableSearchNCS(TS,$1,CLASSE_VAR,proc_id);
+			if (indice == -1) {
+				// Identificador não encontrado
+				semerr = 1;
+				errmsg(); fprintf(stderr,"Identificador '%s' não encontrado.\n", $1);
+			} else {
+				Simble *simbolo = TS->simbolos[indice];
+				$$ = simbolo->type;
+			}
+		} |
 		NUMERO_INTEIRO	|
 		NUMERO_REAL		|
 		A_PAR expressao f_par
@@ -388,23 +405,23 @@ fator : IDENTIFICADOR 	|
 /* REGRAS DE TRATAMENTO DE ERROS */
 pv :
 		PV |
-		error { if (reperr) errmsg("';' esperado."); yyerrok; reperr = 0; }
+		error { if (reperr) { errmsg(); fprintf(stderr,"';' esperado.\n"); } yyerrok; reperr = 0; }
 		;
 ponto :
 		PONTO |
-		error { if (reperr) errmsg("'.' esperado."); reperr = 0; }
+		error { if (reperr) { errmsg(); fprintf(stderr,"'.' esperado.\n"); } reperr = 0; }
 		;
 dp :
 		DP |
-		error { if (reperr) errmsg("':' esperado."); reperr = 0; }
+		error { if (reperr) { errmsg(); fprintf(stderr,"':' esperado.\n"); } reperr = 0; }
 		;
 a_par :
 		A_PAR |
-		error { if (reperr) errmsg("'(' esperado."); reperr = 0; }
+		error { if (reperr) { errmsg(); fprintf(stderr,"'(' esperado.\n"); } reperr = 0; }
 		;
 f_par :
 		F_PAR |
-		error { if (reperr) errmsg("')' esperado."); reperr = 0; }
+		error { if (reperr) { errmsg(); fprintf(stderr,"')' esperado.\n"); } reperr = 0; }
 		;
 %%
 // Chamada quando encontra um fim de arquivo
@@ -417,6 +434,12 @@ void yywrap(void) {
 	} else {
 		fprintf(stdout,"Compilacao concluida com sucesso.\n");
 	}
+	
+	// Print Tabela de simbolos
+	int i;
+	for (i = 0; i < TS->size; i++) {
+		printf("%d: %s\n",i,SimbleToString(TableGet(TS,i)));
+	}
 }
 // Chamada quando encontra um erro
 void yyerror(const char *s) {
@@ -424,7 +447,10 @@ void yyerror(const char *s) {
 	reperr = 1;
 	//fprintf(stderr, "YYError:%d: %s\n", lineno, s);
 }
-void errmsg(const char *msg) {
-	fprintf(stderr, "Erro:%d: %s\n", lineno, msg);
+void errmsg() {
+	fprintf(stderr, "Erro:%d: ", lineno);
 }
+//void errmsg(const char *msg) {
+//	fprintf(stderr, "Erro:%d: %s\n", lineno, msg);
+//}
 

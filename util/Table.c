@@ -146,6 +146,8 @@ Vector* TableSearchParams (Table *v, int from_proc) {
 	for (i = 0; i < v->size; i++) {
 		// procura por from_proc
 		if (v->simbolos[i]->from_proc == from_proc)
+			// procura por classe
+			if (v->simbolos[i]->argument == ARGUMENT_TRUE)
 				VectorAdd(vector, i);
 	}
 

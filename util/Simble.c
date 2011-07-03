@@ -11,7 +11,6 @@ Simble *SimbleNew() {
 	s->classe = 0;
 	s->type = 0;
 	s->value = 0;
-	s->scope = 0;
 	s->number = 0;
 	s->argument = 0;
 	s->from_proc = 0;
