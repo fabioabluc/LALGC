@@ -124,7 +124,7 @@ int TableSearch (Table *v, char *name) {
 }
 
 // teste de unidade
-int main (void) {
+/*int main (void) {
 	Table *t = TableNew();
 	
 	Simble *s = NULL;
@@ -158,4 +158,4 @@ int main (void) {
 	TableDelete(t);
 
 	return 0;
-}
+}*/
