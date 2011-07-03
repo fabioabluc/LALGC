@@ -78,7 +78,7 @@ void errmsg();
 %type <text> IDENTIFICADOR
 %type <integer> NUMERO_INTEIRO
 %type <real> NUMERO_REAL
-%type <constant> INTEGER REAL tipo_var id_cont expressao fator op_mul mais_fatores termo
+%type <constant> INTEGER REAL tipo_var id_cont expressao fator op_mul mais_fatores termo outros_termos
 /* Supressor de mensagens de shift/reduce */
 %expect 7
 
@@ -341,13 +341,7 @@ cmd :
 				// Identificador não encontrado
 				semerr = 1;
 				errmsg(); fprintf(stderr,"Identificador '%s' não encontrado.\n",$1);				
-			} else {
-				if (TS->simbolos[indice]->type != $3) {
-					semerr = 1;
-					//errmsg(); fprintf(stderr,"Atribuicao de tipos incompatíveis.\n");
-				}
 			}
-
 		} |
 		BEGN comandos END				|
 		/* Producoes de erro */
@@ -355,14 +349,16 @@ cmd :
 		IF condicao error { if (reperr) { errmsg(); fprintf(stderr,"'then' esperado.\n"); } yyerrok; reperr = 0; } cmd pfalsa
 		;
 id_cont :
-		RECEBE {	
+		RECEBE expressao {	
 			if (symbol != NULL && symbol->classe != CLASSE_VAR) {
 				semerr = 1;
 				errmsg(); fprintf(stderr,"Identificador '%s' não é uma variável.\n",symbol->name);
+			} else if (symbol != NULL && symbol->type != TYPE_REAL && $2 == TYPE_REAL) {
+				semerr = 1;
+				errmsg(); fprintf(stderr,"Atribuicao de tipos incompatíveis.\n");
 			}
 			symbol = NULL;
-		}
-		expressao { $$ = $3; } |
+		} |
 		lista_arg {
 			if (symbol != NULL) {
 				int indice = TableSearchNCS(TS,symbol->name,CLASSE_PRC,proc_id);
@@ -413,7 +409,10 @@ relacao :
 		MENOR
 		;
 expressao :
-		termo outros_termos { $$ = $1; } |
+		termo outros_termos {
+			if ($1 == TYPE_REAL || $2 == TYPE_REAL) $$ = TYPE_REAL;
+			else $$ = TYPE_INTEGER;
+		} |
 		/* Producoes de erro */
 		error { if (reperr) { errmsg(); fprintf(stderr,"Expressao invalida.\n"); } reperr = 0; }
 		;
@@ -423,7 +422,10 @@ op_un :
 		/*lambda*/
 		;
 outros_termos :
-		op_ad termo outros_termos |
+		op_ad termo outros_termos {
+			if ($2 == TYPE_REAL || $3 == TYPE_REAL) $$ = TYPE_REAL;
+			else $$ = TYPE_INTEGER;
+		} |
 		/*lambda*/ |
 		/* Producoes de erro */
 		op_ad error { if (reperr) { errmsg(); fprintf(stderr,"Operacao invalida.\n"); } yyerrok; reperr = 0; }
@@ -433,7 +435,10 @@ op_ad :
 		MENOS
 		;
 termo :
-		op_un fator mais_fatores { $$ = $2; }
+		op_un fator mais_fatores {
+			if ($2 == TYPE_REAL || $3 == TYPE_REAL) $$ = TYPE_REAL;
+			else $$ = TYPE_INTEGER;
+		}
 		;
 mais_fatores :
 		op_mul fator mais_fatores {
@@ -464,7 +469,7 @@ fator : IDENTIFICADOR {
 		} |
 		NUMERO_INTEIRO { $$ = TYPE_INTEGER; } |
 		NUMERO_REAL	{ $$ = TYPE_REAL; } |
-		A_PAR expressao f_par
+		A_PAR expressao f_par { $$ = $2; }
 		;
 /* REGRAS DE TRATAMENTO DE ERROS */
 pv :

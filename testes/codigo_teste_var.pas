@@ -17,7 +17,7 @@ end;
 
 begin
 	p := 1;
-	d := 1;
+	a := 1+1.0;
 	p1 := 1;
 	read(a,c);
 	write(a,c);
