@@ -138,6 +138,10 @@ int TableSearchNCS (Table *v, char *name, int classe, int scope) {
 	return -1;
 }
 
+int TableSearchParams (Table *v, int from_proc) {
+	
+}
+
 // teste de unidade
 /*int main (void) {
 	Table *t = TableNew();
