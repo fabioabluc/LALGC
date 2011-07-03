@@ -77,7 +77,7 @@ void errmsg(const char *msg);
 %type <text> IDENTIFICADOR
 %type <integer> NUMERO_INTEIRO
 %type <real> NUMERO_REAL
-%type <constant> INTEGER REAL tipo_var id_cont
+%type <constant> INTEGER REAL tipo_var id_cont expressao
 /* Supressor de mensagens de shift/reduce */
 %expect 7
 
@@ -205,7 +205,7 @@ lista_par :
 			// Adiciona na tabela
 			while (SSSize(var_stack) > 0) {
 				char *var_name = SSPop(var_stack);
-				int indice = TableSearch(TS,var_name);
+				int indice = TableSearchFromProc(TS,var_name,proc_id);
 				if (indice != -1) {
 					Simble *param = TS->simbolos[indice];
 					printf("SIMBLE: %s\n",SimbleToString(param));
@@ -297,7 +297,7 @@ id_cont :
 				errmsg("Identificador não é uma variável.");
 			}
 		}
-		expressao |
+		expressao { $$ = $3; } |
 		lista_arg
 		;
 condicao :
