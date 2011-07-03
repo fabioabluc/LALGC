@@ -34,4 +34,7 @@ void TableSortInterval (Table *v, int begin, int end);
 // retorna o indice
 int TableSearch (Table *v, char *name);
 
+// busca por nome e from_proc
+int TabelSearchFromProc (Table *v, char *name, int from_proc);
+
 #endif

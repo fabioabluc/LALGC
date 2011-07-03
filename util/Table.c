@@ -102,25 +102,26 @@ void TableSortInterval (Table *v, int begin, int end) {
 // busca
 // retorna o indice
 int TableSearch (Table *v, char *name) {
-	int inf = 0;
-	int sup = v->size - 1;
-	int meio;
-	int achou = 0;
-	int compara;
-	
-	while (!achou && (inf <= sup)) {
-		meio = (inf + sup) / 2;
-		compara = strcmp(v->simbolos[meio]->name, name);
-		if (compara == 0) {
-			achou = 1;
-		} else if (compara > 0) {
-			sup = meio - 1;
-		} else if (compara < 0) {
-			inf = meio + 1;
-		}
+	int i;
+	for (i = 0; i < v->size; i++) {
+		// procura por name
+		if (strcmp(v->simbolos[i]->name, name) == 0)
+			return i;
 	}
-	if (achou) return meio; 
-	else return -1;
+	return -1;
+}
+
+// busca por nome e from_proc
+int TabelSearchFromProc (Table *v, char *name, int from_proc) {
+	int i;
+	for (i = 0; i < v->size; i++) {
+		// procura por from_proc
+		if (v->simbolos[i]->from_proc == from_proc)
+			// procura por name
+			if (strcmp(v->simbolos[i]->name, name) == 0)
+				return i;
+	}
+	return -1;
 }
 
 // teste de unidade
