@@ -335,14 +335,7 @@ cmd :
 				symbol = TS->simbolos[indice];
 			}
 		} 
-		id_cont {
-			int indice = TableSearchFromProc(TS,$1,proc_id);
-			if (indice == -1) {
-				// Identificador não encontrado
-				semerr = 1;
-				errmsg(); fprintf(stderr,"Identificador '%s' não encontrado.\n",$1);				
-			}
-		} |
+		id_cont |
 		BEGN comandos END				|
 		/* Producoes de erro */
 		error { if (reperr) { errmsg(); fprintf(stderr,"Comando não reconhecido.\n"); yyclearin; } reperr = 0; } |
@@ -505,10 +498,11 @@ void yywrap(void) {
 	}
 	
 	// Print Tabela de simbolos
-	int i;
-	for (i = 0; i < TS->size; i++) {
-		printf("%d: %s\n",i,SimbleToString(TableGet(TS,i)));
-	}
+	//printf("\nTABELA DE SIMBOLOS");
+	//int i;
+	//for (i = 0; i < TS->size; i++) {
+	//	printf("%d: %s\n",i,SimbleToString(TableGet(TS,i)));
+	//}
 }
 // Chamada quando encontra um erro
 void yyerror(const char *s) {
