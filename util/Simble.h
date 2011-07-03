@@ -20,6 +20,8 @@ typedef struct {
 	int   type;     // integer / real
 	float value;    // valor da variavel
 
+	int scope;
+
 	// para procedimentos
 	int  number;    // numero de parametros
 	int  argument;  // eh um argumento?
