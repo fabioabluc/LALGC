@@ -12,7 +12,7 @@ CLIBS=
 CFILES=$(shell find -name \*.c)
 OBJ=LALGC
 
-TESTE=testes/codigo_teste2.pas
+TESTE=testes/codigo_teste_var.pas
 
 all:
 	$(LEX) $(LEXFLAGS) $(LFILES)

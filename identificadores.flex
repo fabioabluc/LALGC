@@ -29,8 +29,8 @@ NUM_REAL_ERRO        {NUMERO}+({LETRA}*{NUMERO}*)+\.(\.|{NUM_INT_ERRO}|{NUM_INTE
 
 %%
 {IDENT}              { strcpy(yylval.text,yytext); return classify_identifier(yytext); }
-{NUM_INTEIRO}        { return NUMERO_INTEIRO; }
-{NUM_REAL}           { return NUMERO_REAL; }
+{NUM_INTEIRO}        { yylval.integer = atoi(yytext); return NUMERO_INTEIRO; }
+{NUM_REAL}           { yylval.real = atof(yytext); return NUMERO_REAL; }
 
 "("                  { return classify_identifier(yytext); }
 ")"                  { return classify_identifier(yytext); }

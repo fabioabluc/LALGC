@@ -3,15 +3,20 @@
 #include <stdio.h>
 #include "util/Simble.h"
 #include "util/Table.h"
+#include "util/Stack.h"
 
 // Numero da linha
 int lineno = 1;
 // Booleana para erros sintaticos
 int synerr = 0;
+// Booleana para erros semanticos
+int semerr = 0;
 // Booleana para reportar erros
 int reperr = 0;
 // Tabela de simbolos
 Table *TS = NULL;
+// Lista de variaveis para a regra variaveis
+StackInterval *var_stack = NULL;
 
 int yylex (void);
 void yywrap(void);
@@ -94,7 +99,8 @@ dc :
 		dc_v dc_p
 		;
 dc_v :
-		VAR variaveis dp tipo_var PV dc_v |
+		VAR { var_stack =  SINew(); } 
+		variaveis dp tipo_var PV dc_v |
 		/*lambda*/ |
 		/* Producoes de erro */
 		VAR variaveis dp error PV { if (reperr) errmsg("Tipo invalido."); yyerrok; reperr = 0; }  dc_v |
@@ -108,10 +114,18 @@ tipo_var :
 		;
 variaveis :
 		IDENTIFICADOR
-		{// Procura na tabela de simbolos
-			printf("IDENTIFICADOR: %s\n",yylval.text);
+		{	//printf("IDENTIFICADOR: %s\n",yylval.text);
+			// Procura na tabela de simbolos
 			if (TableSearch(TS,yylval.text) != -1) {
-				
+				// Identificador ja declarado
+				semerr = 1;
+				errmsg("Identificador duplicado.");
+			} else {
+				// Adiciona na tabela
+				Simble *var = SimbleNew();
+				SimbleSetName(var,yylval.text);
+				var->classe = CLASSE_VAR;
+				TableAdd(TS,var);
 			}
 		}
 		mais_var
@@ -121,7 +135,21 @@ mais_var :
 		/*lambda*/
 		;
 dc_p :
-		PROCEDURE IDENTIFICADOR parametros pv corpo_p dc_p |
+		PROCEDURE IDENTIFICADOR
+		{	// Procura na tabela de simbolos
+			if (TableSearch(TS,yylval.text) != -1) {
+				// Identificador ja declarado
+				semerr = 1;
+				errmsg("Identificador duplicado.");
+			} else {
+				// Adiciona na tabela
+				Simble *prc = SimbleNew();
+				SimbleSetName(prc,yylval.text);
+				prc->classe = CLASSE_PRC;
+				TableAdd(TS,prc);
+			}
+		}
+		parametros pv corpo_p dc_p |
 		/*lambda*/ |
 		/* Producoes de erro */
 		PROCEDURE IDENTIFICADOR error '\n' { if (reperr) errmsg("Parametros nao reconhecidos."); reperr = 0; } corpo_p dc_p 
@@ -173,15 +201,30 @@ cmd :
 		WHILE condicao DO cmd 			|
 		REPEAT cmd UNTIL condicao		|
 		IF condicao THEN cmd pfalsa 	|
-		IDENTIFICADOR id_cont			|
+		IDENTIFICADOR
+		{	//Verificando declaracao
+			int indice = TableSearch(TS,yylval.text);
+			if (indice == -1) {
+				// Identificador não encontrado
+				semerr = 1;
+				errmsg("Identificador não encontrado.");
+			} else {
+				int id_class = TS->simbolos[indice]->classe;
+			}
+		}
+		id_cont			|
 		BEGN comandos END				|
 		/* Producoes de erro */
 		error { if (reperr) errmsg("Comando não reconhecido."); yyclearin; reperr = 0; } |
 		IF condicao error { if (reperr) errmsg("'then' esperado."); yyerrok; reperr = 0; } cmd pfalsa
 		;
 id_cont :
-		RECEBE expressao |
-		lista_arg
+		RECEBE expressao
+		{	
+			if (id_class != CLASSE_VAR) {
+				errmsg("Identificador não é uma variável.");
+		} |
+		lista_arg {}
 		;
 condicao :
 		expressao relacao expressao |
