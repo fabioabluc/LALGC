@@ -2,6 +2,7 @@
 
 #include "Simble.h"
 #include "Stack.h"
+#include "Vector.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -138,8 +139,17 @@ int TableSearchNCS (Table *v, char *name, int classe, int from_proc) {
 	return -1;
 }
 
-int TableSearchParams (Table *v, int from_proc) {
+Vector* TableSearchParams (Table *v, int from_proc) {
+	Vector *vector = VectorNew();
 	
+	int i;
+	for (i = 0; i < v->size; i++) {
+		// procura por from_proc
+		if (v->simbolos[i]->from_proc == from_proc)
+				VectorAdd(vector, i);
+	}
+
+	return vector;
 }
 
 // teste de unidade

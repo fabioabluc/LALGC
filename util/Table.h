@@ -3,6 +3,8 @@
 
 #include "Simble.h"
 
+#include "Vector.h"
+
 typedef struct {
 	Simble** simbolos;
 	int size;
@@ -39,6 +41,6 @@ int TableSearchFromProc (Table *v, char *name, int from_proc);
 
 int TableSearchNCS (Table *v, char *name, int classe, int scope);
 
-int TableSearchParams (Table *v, int from_proc);
+Vector* TableSearchParams (Table *v, int from_proc);
 
 #endif
