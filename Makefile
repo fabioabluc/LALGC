@@ -23,7 +23,7 @@ run: all
 	./$(OBJ) $(TESTE)
 
 clean:
-	rm -f lex.yy.c sintatico.tab.h sintatico.tab.c LALGC LALGC.zip $(shell find -name \*.o)
+	rm -f lex.yy.c sintatico.tab.h sintatico.tab.c LALGC LALGC.zip $(shell find -name \*.o) a.out
 	
 zip: clean
 	zip -r LALGC ../LALGC/
