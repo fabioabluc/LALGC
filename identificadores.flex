@@ -6,6 +6,8 @@
 #include "util/Simble.h"
 #include "util/Table.h"
 
+int yyparse (void);
+
 /* numero da linha atual a sendo testada 
 *  util para informacoes de erro 
 */
@@ -19,6 +21,8 @@ int classify_identifier(char *token);
 %}
 
 /*%option noyywrap*/
+%option nounput
+%option noinput
 
 LETRA                [a-zA-Z_]
 NUMERO               [0-9]
@@ -209,7 +213,7 @@ int main(int argc, char **argv) {
 	TS = TableNew();
 	yyparse();
 	fclose(yyin);
-
+	
 	return 0;
 }
 
