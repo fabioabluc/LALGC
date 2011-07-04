@@ -101,7 +101,7 @@ int PCodeNumLines (PCode* p) {
 		aux = aux->prox;
 		cout++;
 	}
-	return cout;
+	return cout + 1;
 }
 
 // salva o pcode
@@ -111,9 +111,10 @@ void PCodeSave (PCode* p, char* filename) {
 		fprintf(stderr, "PCodeSave: falha ao salvar codigo.");
 	} else {
 		Code* aux = *p;
+		int contador = 0;
 		while (aux != NULL) {
 			
-			fprintf(fp, "%s", aux->code);
+			fprintf(fp, "%d. %s", ++contador, aux->code);
 			if (aux->param != NO_PARAM) fprintf(fp, " %d", aux->param);
 			fprintf(fp, "\n");
 

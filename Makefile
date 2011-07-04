@@ -12,14 +12,14 @@ CLIBS=
 CFILES=$(shell find -name \*.c)
 OBJ=LALGC
 
-TESTE=testes/codigo_teste_funciona.pas
+TESTE=testes/codigo_teste_funciona2.pas
 
 all:
 	$(LEX) $(LEXFLAGS) $(LFILES)
 	$(YACC) $(YACCFLAGS) $(YFILES)
 	$(CC) $(CFLAGS) $(CLIBS) -o $(OBJ) $(CFILES)
 
-run:
+run: all
 	./$(OBJ) $(TESTE)
 
 clean:
