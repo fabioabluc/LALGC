@@ -39,6 +39,9 @@ int TableSearch (Table *v, char *name);
 // busca por nome e from_proc
 int TableSearchFromProc (Table *v, char *name, int from_proc);
 
+// busca por nome e contexto
+int TableSearchFromContext (Table *v, char *name, int from_proc);
+
 int TableSearchNCS (Table *v, char *name, int classe, int scope);
 
 Vector* TableSearchParams (Table *v, int from_proc);

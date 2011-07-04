@@ -125,6 +125,19 @@ int TableSearchFromProc (Table *v, char *name, int from_proc) {
 	return -1;
 }
 
+// busca por nome e contexto
+int TableSearchFromContext (Table *v, char *name, int from_proc) {
+	int i;
+	for (i = 0; i < v->size; i++) {
+		// procura por from_proc
+		if (v->simbolos[i]->from_proc == from_proc || v->simbolos[i]->from_proc == 0)
+			// procura por name
+			if (strcmp(v->simbolos[i]->name, name) == 0)
+				return i;
+	}
+	return -1;
+}
+
 int TableSearchNCS (Table *v, char *name, int classe, int from_proc) {
 	int i;
 	for (i = 0; i < v->size; i++) {

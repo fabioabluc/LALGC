@@ -115,20 +115,19 @@ StackCode* pendurados = NULL;
 /* REGRAS DA LALG */
 programa :
 		PROGRAM {
-//			pendurados = SCNew();
-//			enderecos = VectorNew();
-//			
-//			PCodeNew(&codigo);
-//			PCodeInsert(&codigo, "INPP", NO_PARAM); 
-		} IDENTIFICADOR pv corpo ponto { 
-//			if (!errocc) {
-//				PCodeInsert(&codigo, "PARA", NO_PARAM);
-//				PCodeSave(&codigo, output);
-//			}
-//
-//			PCodeDelete(&codigo);
-//			SCDelete(pendurados);
-//			VectorDelete(enderecos);
+			pendurados = SCNew();
+			enderecos = VectorNew();
+			
+			PCodeNew(&codigo);
+			PCodeInsert(&codigo, "INPP", NO_PARAM); 
+  	} IDENTIFICADOR pv corpo ponto { 
+			if (!errocc) {
+				PCodeInsert(&codigo, "PARA", NO_PARAM);
+				PCodeSave(&codigo, output);
+			}
+
+			SCDelete(pendurados);
+			VectorDelete(enderecos);
 		} |
 		/* Producoes de erro */
 		error { if (reperr) { errmsg(); fprintf(stderr,"'program' esperado.\n"); } reperr = 0; } PV corpo ponto 	|
@@ -179,8 +178,8 @@ dc_v :
 					TableAdd(TS,var);
 				}
 
-//				if (!errocc)
-//					PCodeInsert(&codigo, "ALME", 1);
+				if (!errocc)
+					PCodeInsert(&codigo, "ALME", 1);
 			}
 			var_stack = NULL;
 		}
@@ -241,11 +240,11 @@ dc_p :
 			}
 			++proc_id;
 			
-//			if (!errocc) {
-//				SCPush(pendurados, PCodeInsert(&codigo, "DSVI", NO_PARAM));
-//				proc->position = PCodeNumLines(&codigo);
-//				ppos++;
-//			}
+			if (!errocc) {
+				SCPush(pendurados, PCodeInsert(&codigo, "DSVI", NO_PARAM));
+				proc->position = PCodeNumLines(&codigo);
+				ppos++;
+			}
 		}
 		parametros {
 			if (!reperr) {
@@ -257,15 +256,15 @@ dc_p :
 			
 		}
 		pv corpo_p {
-//			if (!errocc) {
-//				desm += nparam;
-//				PCodeInsert(&codigo, "DESM", desm);
-//				PCodeInsert(&codigo, "RTPR", NO_PARAM);
-//				SCPop(pendurados)->param = PCodeNumLines(&codigo);
-//				ppos -= desm + 1;
-//				desm = 0;
-//				nparam = 0;
-//			}
+			if (!errocc) {
+				desm += nparam;
+				PCodeInsert(&codigo, "DESM", desm);
+				PCodeInsert(&codigo, "RTPR", NO_PARAM);
+				SCPop(pendurados)->param = PCodeNumLines(&codigo);
+				ppos -= desm + 1;
+				desm = 0;
+				nparam = 0;
+			}
 		} dc_p |
 		/*lambda*/ |
 		/* Producoes de erro */
@@ -310,10 +309,10 @@ lista_par :
 					TableAdd(TS,param);
 				}
 				
-//				if (!errocc) {
-//					nparam++;
-//					PCodeInsert(&codigo, "COPVL", NO_PARAM);
-//				}
+				if (!errocc) {
+					nparam++;
+					PCodeInsert(&codigo, "COPVL", NO_PARAM);
+				}
 			}
 			var_stack = NULL;
 		}
@@ -371,10 +370,10 @@ cmd :
 						break;
 					}
 
-//					if (!errocc) {
-//						PCodeInsert(&codigo, "LEIT", NO_PARAM);
-//						PCodeInsert(&codigo, "ARMZ", var->position);
-//					}
+					if (!errocc) {
+						PCodeInsert(&codigo, "LEIT", NO_PARAM);
+						PCodeInsert(&codigo, "ARMZ", var->position);
+					}
 				} else {
 					semerr = 1;
 					errmsg(); fprintf(stderr,"Variável '%s' não declarada.\n",var_name);
@@ -395,10 +394,10 @@ cmd :
 						break;
 					}
 
-//					if (!errocc) {
-//						PCodeInsert(&codigo, "CRVL", var->position);
-//						PCodeInsert(&codigo, "IMPR", NO_PARAM);
-//					}
+					if (!errocc) {
+						PCodeInsert(&codigo, "CRVL", var->position);
+						PCodeInsert(&codigo, "IMPR", NO_PARAM);
+					}
 				} else {
 					semerr = 1;
 					errmsg(); fprintf(stderr,"Variável '%s' não declarada.\n",var_name);
@@ -406,61 +405,61 @@ cmd :
 			}
 		} |
 		WHILE condicao {
-//			if (!errocc) {
-//				SCPush(pendurados, PCodeInsert(&codigo, "DSVF", NO_PARAM));
-//			}
-		} DO cmd {
-//			if (!errocc) {
-//				SCPop(pendurados)->param = PCodeNumLines(&codigo);
-//			}
-		} 			|
-		REPEAT {
-//			if (!errocc) {
-//				VectorAdd(enderecos, PCodeNumLines(&codigo) - 1);
-//			}
-		} cmd UNTIL condicao {
-//			if (!errocc) {
-//				PCodeInsert(&codigo, "DSVF", VectorGet(enderecos, VectorSize(enderecos) - 1));
-//				VectorRemove(enderecos, VectorSize(enderecos) - 1);
-//			}
-		}		|
-		IF condicao THEN {
-//			if (!errocc) {
-//				SCPush(pendurados, PCodeInsert(&codigo, "DSVF", NO_PARAM));
-//			}
-		} cmd {
-//			if (!errocc) {
-//				Code* p2 = PCodeInsert(&codigo, "DSVI", NO_PARAM);
-//				Code* pendurado = SCPop(pendurados);
-//				SCPush(pendurados, p2);
-//				pendurado->param = PCodeNumLines(&codigo);
-//				pendurado = p2;
-//			}
-		} pfalsa {
-//			if (!errocc) {
-//				SCPop(pendurados)->param = PCodeNumLines(&codigo);
-//			}
-		}	|
-		IDENTIFICADOR {
-			//Verificando declaracao
-			int indice = TableSearchFromProc(TS,$1,proc_id);
-			if (indice == -1) {
-				// Identificador não encontrado
-				semerr = 1;
-				errmsg(); fprintf(stderr,"Identificador '%s' não encontrado.\n",$1);
-			} else {
-				symbol = TS->simbolos[indice];
+			if (!errocc) {
+				SCPush(pendurados, PCodeInsert(&codigo, "DSVF", NO_PARAM));
 			}
-		} 
-		id_cont {
-//			if (!errocc) {
-//				if (symbol->classe == CLASSE_VAR) {
-//					PCodeInsert(&codigo, "ARMZ", symbol->position);
-//				} else if (symbol->classe == CLASSE_PRC) {
-//					PCodeInsert(&codigo, "CHPR", symbol->position);
-//					SCPop(pendurados)->param = PCodeNumLines(&codigo);
-//				}
-//			}
+  	} DO cmd {
+			if (!errocc) {
+				SCPop(pendurados)->param = PCodeNumLines(&codigo);
+			}
+  	} 			|
+  	REPEAT {
+			if (!errocc) {
+				VectorAdd(enderecos, PCodeNumLines(&codigo) - 1);
+			}
+  	} cmd UNTIL condicao {
+			if (!errocc) {
+				PCodeInsert(&codigo, "DSVF", VectorGet(enderecos, VectorSize(enderecos) - 1));
+				VectorRemove(enderecos, VectorSize(enderecos) - 1);
+			}
+  	}		|
+  	IF condicao THEN {
+			if (!errocc) {
+				SCPush(pendurados, PCodeInsert(&codigo, "DSVF", NO_PARAM));
+			}
+  	} cmd {
+			if (!errocc) {
+				Code* p2 = PCodeInsert(&codigo, "DSVI", NO_PARAM);
+				Code* pendurado = SCPop(pendurados);
+				SCPush(pendurados, p2);
+				pendurado->param = PCodeNumLines(&codigo);
+				pendurado = p2;
+			}
+  	} pfalsa {
+			if (!errocc) {
+				SCPop(pendurados)->param = PCodeNumLines(&codigo);
+			}
+  	}	|
+  	IDENTIFICADOR {
+  		//Verificando declaracao
+  		int indice = TableSearchFromContext(TS,$1,proc_id);
+  		if (indice == -1) {
+  			// Identificador não encontrado
+  			semerr = 1;
+  			errmsg(); fprintf(stderr,"Identificador '%s' não encontrado.?\n",$1);
+  		} else {
+  			symbol = TS->simbolos[indice];
+  		}
+  	} 
+  	id_cont {
+			if (!errocc) {
+				if (symbol->classe == CLASSE_VAR) {
+					PCodeInsert(&codigo, "ARMZ", symbol->position);
+				} else if (symbol->classe == CLASSE_PRC) {
+					PCodeInsert(&codigo, "CHPR", symbol->position);
+					SCPop(pendurados)->param = PCodeNumLines(&codigo);
+				}
+			}
 			symbol = NULL;
 		} |
 		BEGN comandos END				|
@@ -483,9 +482,9 @@ id_cont :
 				int indice = TableSearchNCS(TS,symbol->name,CLASSE_PRC,proc_id);
 				if (indice != -1) {
 					Simble *proc = TS->simbolos[indice];
-//					if (!errocc) {
-//						SCPush(pendurados, PCodeInsert(&codigo, "PUSHER", NO_PARAM));
-//					}
+					if (!errocc) {
+						SCPush(pendurados, PCodeInsert(&codigo, "PUSHER", NO_PARAM));
+					}
 					if (proc->number == SSSize(var_stack)) {
 						Vector *formal = TableSearchParams(TS,proc->type);
 						int i;
@@ -500,9 +499,9 @@ id_cont :
 									errmsg(); fprintf(stderr,"Parâmetro %d do procedimento '%s'. Tipo de '%s' incompatível.\n",i+1,proc->name,real->name);
 								}
 
-//								if (!errocc) {
-//									PCodeInsert(&codigo, "PARAM", real->position);
-//								}
+								if (!errocc) {
+									PCodeInsert(&codigo, "PARAM", real->position);
+								}
 							} else {
 								semerr = 1;
 								//Parametro real invalido
@@ -522,16 +521,16 @@ id_cont :
 		;
 condicao :
 		expressao relacao expressao {
-//			if (!errocc) {
-//				switch ($2) {
-//					case 0: PCodeInsert(&codigo, "CPIG", NO_PARAM); break;
-//					case 1: PCodeInsert(&codigo, "CDES", NO_PARAM); break;
-//					case 2: PCodeInsert(&codigo, "CMAI", NO_PARAM); break;
-//					case 3: PCodeInsert(&codigo, "CPMI", NO_PARAM); break;
-//					case 4: PCodeInsert(&codigo, "CPME", NO_PARAM); break;
-//					case 5: PCodeInsert(&codigo, "CPMA", NO_PARAM); break;
-//				}
-//			}
+			if (!errocc) {
+				switch ($2) {
+					case 0: PCodeInsert(&codigo, "CPIG", NO_PARAM); break;
+					case 1: PCodeInsert(&codigo, "CDES", NO_PARAM); break;
+					case 2: PCodeInsert(&codigo, "CMAI", NO_PARAM); break;
+					case 3: PCodeInsert(&codigo, "CPMI", NO_PARAM); break;
+					case 4: PCodeInsert(&codigo, "CPMA", NO_PARAM); break;
+					case 5: PCodeInsert(&codigo, "CPME", NO_PARAM); break;
+				}
+			}
 		} |
 		/* Producoes de erro */
 		error { if (reperr) { errmsg(); fprintf(stderr,"Condicao invalida.\n"); } reperr = 0; }
@@ -577,26 +576,26 @@ op_un :
 		;
 outros_termos_aux: 
 		op_ad termo {
-//			if (!errocc) {
-//				if ($1 == 1) {
-//					PCodeInsert(&codigo, "SUBT", NO_PARAM);
-//				} else {
-//					PCodeInsert(&codigo, "SOMA", NO_PARAM);
-//				}
-//			}
+			if (!errocc) {
+				if ($1 == 1) {
+					PCodeInsert(&codigo, "SUBT", NO_PARAM);
+				} else {
+					PCodeInsert(&codigo, "SOMA", NO_PARAM);
+				}
+			}
 
 			if ($2 == TYPE_REAL) $$ = TYPE_REAL;
 			else $$ = TYPE_INTEGER;
-		}
+		} |
+		/* Producoes de erro */
+		op_ad error { if (reperr) { errmsg(); fprintf(stderr,"Operacao invalida.\n"); } yyerrok; reperr = 0; }
 outros_termos :
 		outros_termos_aux outros_termos {
 			if ($1 == TYPE_REAL || $2 == TYPE_REAL) $$ = TYPE_REAL;
 			else $$ = TYPE_INTEGER;
 		} |
 		/*lambda*/ {
-		} |
-		/* Producoes de erro */
-		op_ad error { if (reperr) { errmsg(); fprintf(stderr,"Operacao invalida.\n"); } yyerrok; reperr = 0; }
+		} 
 		;
 op_ad :
 		MAIS {
@@ -608,11 +607,11 @@ op_ad :
 		;
 termo_aux:
 		op_un fator {
-//			if (!errocc) {
-//				if ($1 == 1) {
-//					PCodeInsert(&codigo, "INVE", NO_PARAM);
-//				}
-//			}
+			if (!errocc) {
+				if ($1 == 1) {
+					PCodeInsert(&codigo, "INVE", NO_PARAM);
+				}
+			}
 			
 			if ($2 == TYPE_REAL) $$ = TYPE_REAL;
 			else $$ = TYPE_INTEGER;
@@ -625,13 +624,13 @@ termo :
 		;
 mais_fatores :
 		op_mul fator {
-//			if (!errocc) {
-//				if ($1 == DIV) {
-//					PCodeInsert(&codigo, "DIVI", NO_PARAM);
-//				} else if ($1 == VZS) {
-//					PCodeInsert(&codigo, "MULT", NO_PARAM);
-//				}
-//			}
+			if (!errocc) {
+				if ($1 == DIV) {
+					PCodeInsert(&codigo, "DIVI", NO_PARAM);
+				} else if ($1 == VZS) {
+					PCodeInsert(&codigo, "MULT", NO_PARAM);
+				}
+			}
 		} mais_fatores {
 			if ($1 == DIV && $2 == TYPE_REAL) {
 				semerr = 1;
@@ -658,24 +657,24 @@ fator : IDENTIFICADOR {
 				Simble *simbolo = TS->simbolos[indice];
 				$$ = simbolo->type;
 
-//				if (!errocc) {
-//					PCodeInsert(&codigo, "CRVL", simbolo->position);
-//				}
+				if (!errocc) {
+					PCodeInsert(&codigo, "CRVL", simbolo->position);
+				}
+  		}
+  	} |
+  	NUMERO_INTEIRO { 
+  		$$ = TYPE_INTEGER; 
+
+			if (!errocc) {
+				PCodeInsert(&codigo, "CRCT", $1);
 			}
-		} |
-		NUMERO_INTEIRO { 
-			$$ = TYPE_INTEGER; 
+  	} |
+  	NUMERO_REAL	{
+  		$$ = TYPE_REAL; 
 
-//			if (!errocc) {
-//				PCodeInsert(&codigo, "CRCT", $1);
-//			}
-		} |
-		NUMERO_REAL	{
-			$$ = TYPE_REAL; 
-
-//			if (!errocc) {
-//				PCodeInsert(&codigo, "CRCT", $1);
-//			}
+			if (!errocc) {
+				PCodeInsert(&codigo, "CRCT", $1);
+			}
 		} |
 		A_PAR expressao f_par { $$ = $2; }
 		;
