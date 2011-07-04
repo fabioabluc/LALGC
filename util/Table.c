@@ -154,6 +154,19 @@ Vector* TableSearchParams (Table *v, int from_proc) {
 	return vector;
 }
 
+// conta quantidade de variaveis locais
+int TableCountLocal (Table *v, int from_proc) {
+	int count = 0;
+	int i;
+	
+	for (i = 0; i < v->size; i++) {
+		if (v->simbolos[i]->from_proc == from_proc)
+			count++;
+	}
+
+	return count;
+}
+
 // teste de unidade
 /*int main (void) {
 	Table *t = TableNew();

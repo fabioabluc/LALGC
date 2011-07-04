@@ -5,6 +5,7 @@
 #include "util/Table.h"
 #include "util/StackString.h"
 #include "util/Vector.h"
+#include "util/Code.h"
 
 // Numero da linha
 int lineno = 1;
@@ -27,6 +28,28 @@ int yylex (void);
 void yywrap(void);
 void yyerror(const char *);
 void errmsg();
+
+// error ocurred
+#define errocc (lexerr || synerr || semerr)
+
+// codigo
+PCode codigo;
+
+// arquivo de saida
+char *output = "a.out";
+
+// posicao que a variavel vai estar na pilha
+int ppos = 0;
+
+// contador para o desm
+int desm = 0;
+int nparam = 0;
+
+// endereco para retorno ou nao
+int endereco = 0;
+
+// codigo que ficou pendurado, faltando o parametro
+Code* pendurado = NULL;
 
 %}
 
@@ -90,7 +113,15 @@ void errmsg();
 %%
 /* REGRAS DA LALG */
 programa :
-		PROGRAM IDENTIFICADOR pv corpo ponto |
+		PROGRAM {
+			PCodeNew(&codigo);
+			PCodeInsert(&codigo, "INPP", NO_PARAM); 
+		} IDENTIFICADOR pv corpo ponto { 
+			if (!errocc) {
+				PCodeInsert(&codigo, "PARA", NO_PARAM);
+				PCodeSave(&codigo, output);
+			}
+		} |
 		/* Producoes de erro */
 		error { if (reperr) { errmsg(); fprintf(stderr,"'program' esperado.\n"); } reperr = 0; } PV corpo ponto 	|
 		error { if (reperr) { errmsg(); fprintf(stderr,"'program' esperado.\n"); } reperr = 0; } corpo ponto 		|
@@ -125,6 +156,7 @@ dc_v :
 						var->value = 0;
 						var->argument = ARGUMENT_FALSE;
 						var->from_proc = proc_id;
+						var->position = ppos++;
 						TableAdd(TS,var);
 					}
 				} else {
@@ -135,8 +167,12 @@ dc_v :
 					var->value = 0;
 					var->argument = ARGUMENT_FALSE;
 					var->from_proc = proc_id;
+					var->position = ppos++;
 					TableAdd(TS,var);
 				}
+
+				if (!errocc)
+					PCodeInsert(&codigo, "ALME", 1);
 			}
 			var_stack = NULL;
 		}
@@ -156,6 +192,7 @@ variaveis :
 		IDENTIFICADOR mais_var {
 			if (var_stack == NULL) var_stack = SSNew();
 			SSPush(var_stack,$1);
+			desm++;
 		}
 		;
 mais_var :
@@ -166,11 +203,12 @@ dc_p :
 		PROCEDURE IDENTIFICADOR {
 			// Procura na tabela de simbolos
 			int indice = TableSearch(TS,$2);
+			Simble *proc = NULL;
 			if (indice != -1) {
-				Simble *proc = TS->simbolos[indice];
+				proc = TS->simbolos[indice];
 				if (proc->classe != CLASSE_PRC) {
 					// Adiciona na tabela
-					Simble *proc = SimbleNew();
+					proc = SimbleNew();
 					SimbleSetName(proc,yylval.text);
 					proc->classe = CLASSE_PRC;
 					proc->type = proc_id+1;
@@ -185,7 +223,7 @@ dc_p :
 				}
 			} else {
 				// Adiciona na tabela
-				Simble *proc = SimbleNew();
+				proc = SimbleNew();
 				SimbleSetName(proc,yylval.text);
 				proc->classe = CLASSE_PRC;
 				proc->type = proc_id+1;
@@ -194,6 +232,13 @@ dc_p :
 				TableAdd(TS,proc);
 			}
 			++proc_id;
+			
+			if (!errocc) {
+				// TODO desviar para a main
+				pendurado = PCodeInsert(&codigo, "DSVI", NO_PARAM);
+				proc->position = PCodeNumLines(&codigo);
+				ppos++;
+			}
 		}
 		parametros {
 			if (!reperr) {
@@ -202,8 +247,19 @@ dc_p :
 				proc->number = TableSearchParams(TS,proc_id)->size;
 			}
 			reperr = 0;
+			
 		}
-		pv corpo_p dc_p |
+		pv corpo_p {
+			if (!errocc) {
+				desm += nparam;
+				PCodeInsert(&codigo, "DESM", desm);
+				PCodeInsert(&codigo, "RTPR", NO_PARAM);
+				pendurado->param = PCodeNumLines(&codigo);
+				ppos -= desm + 1;
+				desm = 0;
+				nparam = 0;
+			}
+		} dc_p |
 		/*lambda*/ |
 		/* Producoes de erro */
 		PROCEDURE IDENTIFICADOR error '\n' { if (reperr) { errmsg(); fprintf(stderr,"Parametros nao reconhecidos.\n"); } reperr = 0; } corpo_p dc_p 
@@ -233,6 +289,7 @@ lista_par :
 						param->type = $3; // $3 = tipo_var.tipo
 						param->argument = ARGUMENT_TRUE;
 						param->from_proc = proc_id;
+						param->position = ppos++;
 						TableAdd(TS,param);
 					}
 				} else {
@@ -242,7 +299,13 @@ lista_par :
 					param->type = $3; // $3 = tipo_var.tipo
 					param->argument = ARGUMENT_TRUE;
 					param->from_proc = proc_id;
+					param->position = ppos++;
 					TableAdd(TS,param);
+				}
+				
+				if (!errocc) {
+					nparam++;
+					PCodeInsert(&codigo, "COPVL", NO_PARAM);
 				}
 			}
 			var_stack = NULL;
@@ -260,7 +323,9 @@ corpo_p :
 		dc_loc error { if (reperr) { errmsg(); fprintf(stderr,"'begin' do procedimento esperado.\n"); } yyerrok; reperr = 0; } comandos END pv
 		;
 dc_loc :
-		dc_v
+		{
+			desm = 0;
+		} dc_v
 		;
 lista_arg :
 		a_par argumentos f_par |
@@ -298,6 +363,11 @@ cmd :
 						errmsg(); fprintf(stderr,"READ com variáveis de tipos diferentes.\n");
 						break;
 					}
+
+					if (!errocc) {
+						PCodeInsert(&codigo, "LEIT", NO_PARAM);
+						PCodeInsert(&codigo, "ARMZ", var->position);
+					}
 				} else {
 					semerr = 1;
 					errmsg(); fprintf(stderr,"Variável '%s' não declarada.\n",var_name);
@@ -317,15 +387,50 @@ cmd :
 						errmsg(); fprintf(stderr,"WRITE com variáveis de tipos diferentes.\n");
 						break;
 					}
+
+					if (!errocc) {
+						PCodeInsert(&codigo, "CRVL", var->position);
+						PCodeInsert(&codigo, "IMPR", NO_PARAM);
+					}
 				} else {
 					semerr = 1;
 					errmsg(); fprintf(stderr,"Variável '%s' não declarada.\n",var_name);
 				}
 			}
 		} |
-		WHILE condicao DO cmd 			|
-		REPEAT cmd UNTIL condicao		|
-		IF condicao THEN cmd pfalsa 	|
+		WHILE condicao {
+			if (!errocc) {
+				pendurado = PCodeInsert(&codigo, "DSVF", NO_PARAM);
+			}
+		} DO cmd {
+			if (!errocc) {
+				pendurado->param = PCodeNumLines(&codigo);
+			}
+		} 			|
+		REPEAT {
+			if (!errocc) {
+				endereco = PCodeNumLines(&codigo) - 1;
+			}
+		} cmd UNTIL condicao {
+			if (!errocc) {
+				PCodeInsert(&codigo, "DSVF", endereco);
+			}
+		}		|
+		IF condicao THEN {
+			if (!errocc) {
+				pendurado = PCodeInsert(&codigo, "DSVF", NO_PARAM);
+			}
+		} cmd {
+			if (!errocc) {
+				Code* p2 = PCodeInsert(&codigo, "DSVI", NO_PARAM);
+				pendurado->param = PCodeNumLines(&codigo);
+				pendurado = p2;
+			}
+		} pfalsa {
+			if (!errocc) {
+				pendurado->param = PCodeNumLines(&codigo);
+			}
+		}	|
 		IDENTIFICADOR {
 			//Verificando declaracao
 			int indice = TableSearchFromProc(TS,$1,proc_id);
@@ -337,7 +442,17 @@ cmd :
 				symbol = TS->simbolos[indice];
 			}
 		} 
-		id_cont |
+		id_cont {
+			if (!errocc) {
+				if (symbol->classe == CLASSE_VAR) {
+					PCodeInsert(&codigo, "ARMZ", symbol->position);
+				} else if (symbol->classe == CLASSE_PRC) {
+					PCodeInsert(&codigo, "CHPR", symbol->position);
+					pendurado->param = PCodeNumLines(&codigo);
+				}
+			}
+			symbol = NULL;
+		} |
 		BEGN comandos END				|
 		/* Producoes de erro */
 		error { if (reperr) { errmsg(); fprintf(stderr,"Comando não reconhecido.\n"); yyclearin; } reperr = 0; } |
@@ -352,13 +467,15 @@ id_cont :
 				semerr = 1;
 				errmsg(); fprintf(stderr,"Atribuicao de tipos incompatíveis.\n");
 			}
-			symbol = NULL;
 		} |
 		lista_arg {
 			if (symbol != NULL) {
 				int indice = TableSearchNCS(TS,symbol->name,CLASSE_PRC,proc_id);
 				if (indice != -1) {
 					Simble *proc = TS->simbolos[indice];
+					if (!errocc) {
+						pendurado = PCodeInsert(&codigo, "PUSHER", NO_PARAM);
+					}
 					if (proc->number == SSSize(var_stack)) {
 						Vector *formal = TableSearchParams(TS,proc->type);
 						int i;
@@ -371,6 +488,10 @@ id_cont :
 								if (real->type != form->type) {
 									semerr = 1;
 									errmsg(); fprintf(stderr,"Parâmetro %d do procedimento '%s'. Tipo de '%s' incompatível.\n",i+1,proc->name,real->name);
+								}
+
+								if (!errocc) {
+									PCodeInsert(&codigo, "PARAM", real->position);
 								}
 							} else {
 								semerr = 1;
@@ -387,7 +508,6 @@ id_cont :
 					errmsg(); fprintf(stderr,"Procedimento '%s' não declarado.\n",symbol->name);
 				}
 			}
-			symbol = NULL;
 		}
 		;
 condicao :
@@ -468,7 +588,7 @@ fator : IDENTIFICADOR {
 		;
 /* REGRAS DE TRATAMENTO DE ERROS */
 pv :
-		PV |
+		PV  |
 		error { if (reperr) { errmsg(); fprintf(stderr,"';' esperado.\n"); } yyerrok; reperr = 0; }
 		;
 ponto :

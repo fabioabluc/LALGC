@@ -24,6 +24,9 @@ typedef struct {
 	int  number;    // numero de parametros
 	int  argument;  // eh um argumento?
 	int  from_proc; // de qual procedimento esta variavel pertence
+
+	// para geracao de codigo
+	int  position;  // posicao da stack q se encontra esta variavel
 } Simble;
 
 // novo simbolo

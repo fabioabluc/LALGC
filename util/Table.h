@@ -43,4 +43,7 @@ int TableSearchNCS (Table *v, char *name, int classe, int scope);
 
 Vector* TableSearchParams (Table *v, int from_proc);
 
+// conta quantidade de variaveis locais
+int TableCountLocal (Table *v, int from_proc);
+
 #endif

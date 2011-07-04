@@ -14,6 +14,7 @@ Simble *SimbleNew() {
 	s->number = 0;
 	s->argument = 0;
 	s->from_proc = 0;
+	s->position = 0;
 
 	return s;
 }
